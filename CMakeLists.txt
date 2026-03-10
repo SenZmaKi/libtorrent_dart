@@ -1,0 +1,90 @@
+cmake_minimum_required(VERSION 3.20)
+
+project(libtorrent_dart LANGUAGES C CXX)
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Options
+# ──────────────────────────────────────────────────────────────────────────────
+
+set(LTD_BOOST_HEADERS_ROOT "/opt/homebrew/include" CACHE PATH
+  "Directory that contains boost/ headers (e.g. /opt/homebrew/include)")
+
+set(LTD_OUTPUT_DIR "${CMAKE_CURRENT_LIST_DIR}/binaries" CACHE PATH
+  "Root directory where platform-specific prebuilt libraries are placed")
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Boost headers
+# ──────────────────────────────────────────────────────────────────────────────
+
+if(EXISTS "${LTD_BOOST_HEADERS_ROOT}/boost/version.hpp")
+  set(Boost_INCLUDE_DIR    "${LTD_BOOST_HEADERS_ROOT}" CACHE PATH "" FORCE)
+  set(Boost_INCLUDE_DIRS   "${LTD_BOOST_HEADERS_ROOT}" CACHE PATH "" FORCE)
+  set(BOOST_ROOT           "${LTD_BOOST_HEADERS_ROOT}" CACHE PATH "" FORCE)
+  set(BOOST_INCLUDEDIR     "${LTD_BOOST_HEADERS_ROOT}" CACHE PATH "" FORCE)
+  set(Boost_NO_SYSTEM_PATHS OFF CACHE BOOL "" FORCE)
+endif()
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Static OpenSSL (macOS/Linux) — link encryption into the wrapper so the
+# output dylib/so has no dependency on a Homebrew or distro OpenSSL path.
+# ──────────────────────────────────────────────────────────────────────────────
+
+if(NOT ANDROID AND NOT WIN32)
+  set(OPENSSL_USE_STATIC_LIBS TRUE CACHE BOOL "" FORCE)
+  # Help CMake find the Homebrew static libs on macOS
+  if(APPLE)
+    set(OPENSSL_ROOT_DIR "/opt/homebrew/opt/openssl@3" CACHE PATH "" FORCE)
+  endif()
+endif()
+
+# ──────────────────────────────────────────────────────────────────────────────
+# libtorrent (git submodule at thirdparty/libtorrent)
+# ──────────────────────────────────────────────────────────────────────────────
+
+add_subdirectory(thirdparty/libtorrent thirdparty/libtorrent-build)
+
+# ──────────────────────────────────────────────────────────────────────────────
+# libtorrent_dart shared library (the FFI wrapper)
+# ──────────────────────────────────────────────────────────────────────────────
+
+add_library(libtorrent_dart SHARED src/c/library.cpp)
+
+target_include_directories(libtorrent_dart PRIVATE src/c)
+
+target_link_libraries(libtorrent_dart PRIVATE torrent-rasterbar)
+
+target_compile_definitions(libtorrent_dart  PRIVATE BOOST_ASIO_DISABLE_STD_ALIGNED_ALLOC)
+target_compile_definitions(torrent-rasterbar PRIVATE BOOST_ASIO_DISABLE_STD_ALIGNED_ALLOC)
+
+set_target_properties(libtorrent_dart PROPERTIES
+  CXX_STANDARD 17
+  CXX_STANDARD_REQUIRED YES
+  OUTPUT_NAME libtorrent-rasterbar
+  PREFIX ""
+)
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Per-platform output directories and post-build fixups
+# ──────────────────────────────────────────────────────────────────────────────
+
+if(APPLE)
+  set_target_properties(libtorrent_dart PROPERTIES
+    LIBRARY_OUTPUT_DIRECTORY "${LTD_OUTPUT_DIR}/macos"
+  )
+  # libtorrent is linked statically into the wrapper (BUILD_SHARED_LIBS=OFF),
+  # so no second dylib needs to be copied or patched.
+elseif(ANDROID)
+  set_target_properties(libtorrent_dart PROPERTIES
+    LIBRARY_OUTPUT_DIRECTORY "${LTD_OUTPUT_DIR}/android"
+  )
+elseif(WIN32)
+  set_target_properties(libtorrent_dart PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY "${LTD_OUTPUT_DIR}/windows"
+    OUTPUT_NAME torrent-rasterbar
+  )
+else()
+  # Linux / other POSIX
+  set_target_properties(libtorrent_dart PROPERTIES
+    LIBRARY_OUTPUT_DIRECTORY "${LTD_OUTPUT_DIR}/linux"
+  )
+endif()

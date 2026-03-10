@@ -1,0 +1,43 @@
+# Dart
+.dart_tool/
+.packages
+pubspec.lock
+build/
+
+# CMake / C++ build artifacts
+cmake_build/
+cmake-build-*/
+CMakeCache.txt
+CMakeFiles/
+Makefile
+*.make
+*.cmake
+!CMakeLists.txt
+
+# Compiled binaries (prebuilts are explicitly allowed in binaries/)
+*.o
+*.a
+*.lo
+*.la
+*.dylib
+*.so
+*.so.*
+*.dll
+*.exe
+!binaries/**/*.dylib
+!binaries/**/*.so
+!binaries/**/*.dll
+!binaries/**/*.exe
+
+# macOS
+.DS_Store
+*.dSYM/
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log
