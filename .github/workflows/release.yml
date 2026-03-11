@@ -26,6 +26,26 @@ jobs:
       - name: Setup Dart SDK
         uses: dart-lang/setup-dart@v1
 
+      - name: Cache Dart packages
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.pub-cache
+            .dart_tool
+          key: ${{ runner.os }}-dart-${{ hashFiles('pubspec.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-dart-
+
+      - name: Cache CMake build dirs
+        uses: actions/cache@v4
+        with:
+          path: |
+            cmake_build
+            thirdparty/libtorrent-build
+          key: ${{ runner.os }}-cmake-${{ hashFiles('CMakeLists.txt', 'src/c/**', 'thirdparty/libtorrent/CMakeLists.txt', 'thirdparty/libtorrent/include/**', 'thirdparty/libtorrent/src/**') }}
+          restore-keys: |
+            ${{ runner.os }}-cmake-
+
       - name: Install Linux dependencies
         if: runner.os == 'Linux'
         run: |

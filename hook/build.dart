@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:code_assets/code_assets.dart';
 import 'package:hooks/hooks.dart';
+import 'package:yaml/yaml.dart';
 
 const _defaultReleaseRepo = 'SenZmaKi/libtorrent_dart';
 
@@ -43,7 +44,8 @@ void main(List<String> args) async {
 
     final binaryFile = File.fromUri(binaryUri);
     if (!binaryFile.existsSync()) {
-      await _downloadReleaseBinary(binaryFile, releaseAssetName);
+      final releaseTag = _resolveReleaseTag(packageRoot);
+      await _downloadReleaseBinary(binaryFile, releaseAssetName, releaseTag);
     }
     if (!binaryFile.existsSync()) {
       throw StateError(
@@ -68,27 +70,50 @@ void main(List<String> args) async {
   });
 }
 
-Future<void> _downloadReleaseBinary(File destination, String assetName) async {
+String _resolveReleaseTag(Uri packageRoot) {
+  final overrideTag = Platform.environment['LTD_RELEASE_TAG'];
+  if (overrideTag != null && overrideTag.isNotEmpty) return overrideTag;
+
+  final pubspecFile = File.fromUri(packageRoot.resolve('pubspec.yaml'));
+  if (!pubspecFile.existsSync()) {
+    throw StateError('pubspec.yaml not found at ${pubspecFile.path}');
+  }
+  final yaml = loadYaml(pubspecFile.readAsStringSync()) as YamlMap;
+  final version = yaml['version']?.toString();
+  if (version == null || version.isEmpty) {
+    throw StateError('Package version missing in pubspec.yaml');
+  }
+  return version;
+}
+
+Future<void> _downloadReleaseBinary(
+  File destination,
+  String assetName,
+  String releaseTag,
+) async {
   final repo = Platform.environment['LTD_RELEASE_REPOSITORY'] ?? _defaultReleaseRepo;
-  final tag = Platform.environment['LTD_RELEASE_TAG'];
-  final releaseApi = tag == null || tag.isEmpty
-      ? Uri.https('api.github.com', '/repos/$repo/releases/latest')
-      : Uri.https('api.github.com', '/repos/$repo/releases/tags/$tag');
+  final candidateTags = <String>[releaseTag, 'v$releaseTag'];
 
   final client = HttpClient();
   client.userAgent = 'libtorrent_dart_hook';
   try {
-    final releaseRes = await (await client.getUrl(releaseApi)).close();
-    if (releaseRes.statusCode != 200) return;
-
-    final releaseBody = await utf8.decodeStream(releaseRes);
-    final releaseJson = jsonDecode(releaseBody) as Map<String, Object?>;
-    final assets = (releaseJson['assets'] as List<Object?>?) ?? const [];
     Map<String, Object?>? selectedAsset;
-    for (final asset in assets) {
-      final map = asset as Map<String, Object?>;
-      if (map['name'] == assetName) {
-        selectedAsset = map;
+    for (final tag in candidateTags) {
+      final releaseApi = Uri.https('api.github.com', '/repos/$repo/releases/tags/$tag');
+      final releaseRes = await (await client.getUrl(releaseApi)).close();
+      if (releaseRes.statusCode != 200) continue;
+
+      final releaseBody = await utf8.decodeStream(releaseRes);
+      final releaseJson = jsonDecode(releaseBody) as Map<String, Object?>;
+      final assets = (releaseJson['assets'] as List<Object?>?) ?? const [];
+      for (final asset in assets) {
+        final map = asset as Map<String, Object?>;
+        if (map['name'] == assetName) {
+          selectedAsset = map;
+          break;
+        }
+      }
+      if (selectedAsset != null) {
         break;
       }
     }
