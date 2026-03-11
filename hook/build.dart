@@ -91,16 +91,27 @@ Future<void> _downloadReleaseBinary(
   String assetName,
   String releaseTag,
 ) async {
-  final repo = Platform.environment['LTD_RELEASE_REPOSITORY'] ?? _defaultReleaseRepo;
+  final repo =
+      Platform.environment['LTD_RELEASE_REPOSITORY'] ?? _defaultReleaseRepo;
   final candidateTags = <String>[releaseTag, 'v$releaseTag'];
 
   final client = HttpClient();
   client.userAgent = 'libtorrent_dart_hook';
   try {
+    stdout.writeln('---------------------------------------------------------');
+    stdout.writeln('Native binary missing: ${destination.path}');
+    stdout.writeln(
+      'Attempting to download $assetName from $repo (tag: $releaseTag)...',
+    );
+    stdout.writeln('---------------------------------------------------------');
+
     Map<String, Object?>? selectedAsset;
     for (final tag in candidateTags) {
-      final releaseApi = Uri.https('api.github.com', '/repos/$repo/releases/tags/$tag');
-      final releaseRes = await (await client.getUrl(releaseApi)).close();
+      final releaseApi = Uri.https(
+        'api.github.com',
+        '/repos/$repo/releases/tags/$tag',
+      );
+      final releaseRes = await _getWithRedirects(client, releaseApi);
       if (releaseRes.statusCode != 200) continue;
 
       final releaseBody = await utf8.decodeStream(releaseRes);
@@ -123,11 +134,51 @@ Future<void> _downloadReleaseBinary(
     if (downloadUrl == null || downloadUrl.isEmpty) return;
 
     destination.parent.createSync(recursive: true);
-    final assetRes = await (await client.getUrl(Uri.parse(downloadUrl))).close();
-    if (assetRes.statusCode != 200) return;
+    stdout.write('Downloading $assetName... ');
+    final assetRes = await _getWithRedirects(client, Uri.parse(downloadUrl));
+    if (assetRes.statusCode != 200) {
+      stdout.writeln('Failed (HTTP ${assetRes.statusCode}).');
+      return;
+    }
 
-    await destination.openWrite().addStream(assetRes);
+    final tempFile = File('${destination.path}.tmp');
+    if (tempFile.existsSync()) tempFile.deleteSync();
+    try {
+      await tempFile.openWrite().addStream(assetRes);
+      if (destination.existsSync()) destination.deleteSync();
+      tempFile.renameSync(destination.path);
+      stdout.writeln('Done.');
+    } catch (_) {
+      if (tempFile.existsSync()) tempFile.deleteSync();
+      rethrow;
+    }
   } finally {
     client.close(force: true);
   }
+}
+
+Future<HttpClientResponse> _getWithRedirects(
+  HttpClient client,
+  Uri uri, {
+  int maxRedirects = 8,
+}) async {
+  Uri current = uri;
+  for (var i = 0; i <= maxRedirects; i++) {
+    final req = await client.getUrl(current);
+    req.followRedirects = false;
+    final res = await req.close();
+    switch (res.statusCode) {
+      case HttpStatus.movedPermanently:
+      case HttpStatus.found:
+      case HttpStatus.seeOther:
+      case HttpStatus.temporaryRedirect:
+      case HttpStatus.permanentRedirect:
+        final location = res.headers.value(HttpHeaders.locationHeader);
+        if (location == null || location.isEmpty) return res;
+        current = current.resolve(location);
+      default:
+        return res;
+    }
+  }
+  throw StateError('Too many redirects while downloading $uri');
 }
