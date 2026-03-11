@@ -72,6 +72,31 @@ add_subdirectory(thirdparty/libtorrent thirdparty/libtorrent-build)
 
 add_library(libtorrent_dart ${LTD_DART_LIBRARY_TYPE} src/c/library.cpp)
 
+# ──────────────────────────────────────────────────────────────────────────────
+# Windows Portability Fix: Static Linking
+# ──────────────────────────────────────────────────────────────────────────────
+if(WIN32)
+  if(MINGW)
+    # Force static linking for MinGW-specific libraries (libgcc, libstdc++, pthreads)
+    target_link_options(libtorrent_dart PRIVATE 
+        "-static-libgcc" 
+        "-static-libstdc++" 
+        "-Wl,-Bstatic" 
+        "-lstdc++" 
+        "-lpthread" 
+        "-Wl,-Bdynamic"
+    )
+  else()
+    # If using MSVC, link the C/C++ Runtime (MT) statically so users don't need 
+    # the "Visual C++ Redistributable" installed.
+    set_property(TARGET libtorrent_dart PROPERTY
+      MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>"
+    )
+  endif()
+  
+  # Ensure core Windows networking and crypto libs are linked
+  target_link_libraries(libtorrent_dart PRIVATE iphlpapi ws2_32 bcrypt)
+endif()
 target_include_directories(libtorrent_dart PRIVATE src/c)
 
 target_link_libraries(libtorrent_dart PRIVATE torrent-rasterbar)
