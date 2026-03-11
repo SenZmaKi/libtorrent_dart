@@ -50,6 +50,13 @@ POSSIBILITY OF SUCH DAMAGE.
 #include <string>
 #include <vector>
 
+#if defined(_WIN32)
+#ifdef TORRENT_EXPORT
+#undef TORRENT_EXPORT
+#endif
+#define TORRENT_EXPORT __declspec(dllexport)
+#endif
+
 namespace {
 std::vector<lt::torrent_handle> handles;
 
