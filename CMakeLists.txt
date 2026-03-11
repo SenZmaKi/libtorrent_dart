@@ -1,5 +1,10 @@
 cmake_minimum_required(VERSION 3.20)
 
+if(POLICY CMP0167)
+  # thirdparty/libtorrent currently relies on FindBoost behavior.
+  cmake_policy(SET CMP0167 OLD)
+endif()
+
 project(libtorrent_dart LANGUAGES C CXX)
 
 set(LTD_DART_LIBRARY_TYPE SHARED)
