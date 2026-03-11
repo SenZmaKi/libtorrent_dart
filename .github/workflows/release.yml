@@ -153,12 +153,19 @@ jobs:
 
       - name: Configure and build (Android arm64)
         run: |
+          test -f /usr/include/boost/version.hpp
           cmake -G Ninja -S . -B cmake_build/android \
             -DCMAKE_TOOLCHAIN_FILE="$ANDROID_NDK_HOME/build/cmake/android.toolchain.cmake" \
             -DANDROID_ABI=arm64-v8a \
             -DANDROID_PLATFORM=android-24 \
             -DCMAKE_BUILD_TYPE=Release \
-            -DLTD_BOOST_HEADERS_ROOT=/usr/include
+            -DLTD_BOOST_HEADERS_ROOT=/usr/include \
+            -DBoost_INCLUDE_DIR=/usr/include \
+            -DBoost_INCLUDE_DIRS=/usr/include \
+            -DBOOST_ROOT=/usr/include \
+            -DBOOST_INCLUDEDIR=/usr/include \
+            -DCMAKE_C_FLAGS="-I/usr/include" \
+            -DCMAKE_CXX_FLAGS="-I/usr/include"
           cmake --build cmake_build/android --target libtorrent_dart -j4
 
       - name: Upload Android binary
