@@ -164,6 +164,9 @@ jobs:
             -DBoost_INCLUDE_DIRS=/usr/include \
             -DBOOST_ROOT=/usr/include \
             -DBOOST_INCLUDEDIR=/usr/include \
+            -DHAVE_CXX_ATOMICS_WITHOUT_LIB=ON \
+            -DHAVE_CXX_ATOMICS8_WITHOUT_LIB=ON \
+            -DHAVE_CXX_ATOMICS64_WITHOUT_LIB=ON \
             -DCMAKE_CXX_FLAGS="-I/usr/include"
           cmake --build cmake_build/android --target libtorrent_dart -j4
 
