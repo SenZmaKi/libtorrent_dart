@@ -47,6 +47,12 @@ endif()
 # libtorrent (git submodule at thirdparty/libtorrent)
 # ──────────────────────────────────────────────────────────────────────────────
 
+if(WIN32)
+  # Avoid runtime DLL dependency issues by statically linking libtorrent into
+  # the Dart wrapper DLL on Windows.
+  set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
+endif()
+
 add_subdirectory(thirdparty/libtorrent thirdparty/libtorrent-build)
 
 # ──────────────────────────────────────────────────────────────────────────────
