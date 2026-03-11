@@ -52,17 +52,23 @@ void main() {
 
     await _waitForStatus(statuses);
     torrent.pause();
-    await _waitForNewStatus(statuses);
-    final pausedObserved = statuses.any((status) => status.paused);
+    final pausedObserved = await _waitForStatusMatch(
+      statuses,
+      predicate: (status) => status.paused,
+    );
 
     torrent.resume();
-    await _waitForNewStatus(statuses);
+    final resumedObserved = await _waitForStatusMatch(
+      statuses,
+      predicate: (status) => !status.paused,
+    );
     await sub.cancel();
     torrent.cancel(deleteFiles: false);
     session.close();
 
     expect(statuses, isNotEmpty);
     expect(pausedObserved, isTrue);
+    expect(resumedObserved, isTrue);
   });
 
   test('cancel stops torrent without errors', () async {
@@ -204,14 +210,16 @@ Future<void> _waitForStatus(
   }
 }
 
-Future<void> _waitForNewStatus(
+Future<bool> _waitForStatusMatch(
   List<TorrentStatus> statuses, {
-  Duration timeout = const Duration(seconds: 6),
+  required bool Function(TorrentStatus) predicate,
+  Duration timeout = const Duration(seconds: 10),
   Duration tick = const Duration(milliseconds: 200),
 }) async {
-  final startCount = statuses.length;
   final deadline = DateTime.now().add(timeout);
-  while (statuses.length == startCount && DateTime.now().isBefore(deadline)) {
+  while (DateTime.now().isBefore(deadline)) {
+    if (statuses.any(predicate)) return true;
     await Future.delayed(tick);
   }
+  return statuses.any(predicate);
 }
