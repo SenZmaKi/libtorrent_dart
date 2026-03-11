@@ -150,24 +150,25 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y cmake ninja-build libboost-dev
+          mkdir -p "$RUNNER_TEMP/boost-headers"
+          cp -R /usr/include/boost "$RUNNER_TEMP/boost-headers/"
 
       - name: Configure and build (Android arm64)
         run: |
-          test -f /usr/include/boost/version.hpp
+          test -f "$RUNNER_TEMP/boost-headers/boost/version.hpp"
           cmake -G Ninja -S . -B cmake_build/android \
             -DCMAKE_TOOLCHAIN_FILE="$ANDROID_NDK_HOME/build/cmake/android.toolchain.cmake" \
             -DANDROID_ABI=arm64-v8a \
             -DANDROID_PLATFORM=android-24 \
             -DCMAKE_BUILD_TYPE=Release \
-            -DLTD_BOOST_HEADERS_ROOT=/usr/include \
-            -DBoost_INCLUDE_DIR=/usr/include \
-            -DBoost_INCLUDE_DIRS=/usr/include \
-            -DBOOST_ROOT=/usr/include \
-            -DBOOST_INCLUDEDIR=/usr/include \
+            -DLTD_BOOST_HEADERS_ROOT="$RUNNER_TEMP/boost-headers" \
+            -DBoost_INCLUDE_DIR="$RUNNER_TEMP/boost-headers" \
+            -DBoost_INCLUDE_DIRS="$RUNNER_TEMP/boost-headers" \
+            -DBOOST_ROOT="$RUNNER_TEMP/boost-headers" \
+            -DBOOST_INCLUDEDIR="$RUNNER_TEMP/boost-headers" \
             -DHAVE_CXX_ATOMICS_WITHOUT_LIB=ON \
             -DHAVE_CXX_ATOMICS8_WITHOUT_LIB=ON \
-            -DHAVE_CXX_ATOMICS64_WITHOUT_LIB=ON \
-            -DCMAKE_CXX_FLAGS="-I/usr/include"
+            -DHAVE_CXX_ATOMICS64_WITHOUT_LIB=ON
           cmake --build cmake_build/android --target libtorrent_dart -j4
 
       - name: Upload Android binary
