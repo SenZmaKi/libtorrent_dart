@@ -28,22 +28,30 @@ void main() async {
 
   print('Initiating release for $tagName...');
 
-  // 3. Create the tag
+  // 3. Create the tag locally
   final tagResult = await Process.run('git', ['tag', tagName]);
   if (tagResult.exitCode != 0) {
     print('Error creating tag: ${tagResult.stderr}');
     exit(1);
   }
 
-  // 4. Push the tag
-  print('Pushing tag to origin...');
-  final pushResult = await Process.run('git', ['push', 'origin', tagName]);
-  if (pushResult.exitCode != 0) {
-    print('Error pushing tag: ${pushResult.stderr}');
+  // 4. Push the current branch first
+  // This prevents the "Commit does not belong to any branch" error
+  print('Pushing branch to origin...');
+  final pushBranch = await Process.run('git', ['push', 'origin', 'HEAD']);
+  if (pushBranch.exitCode != 0) {
+    print('Error pushing branch: ${pushBranch.stderr}');
     exit(1);
   }
 
-  print(
-    'Deployment sequence initiated. GitHub Actions will take it from here.',
-  );
+  // 5. Push the tag
+  // This will trigger the GitHub Action 'on: push: tags'
+  print('Pushing tag $tagName to origin...');
+  final pushTag = await Process.run('git', ['push', 'origin', tagName]);
+  if (pushTag.exitCode != 0) {
+    print('Error pushing tag: ${pushTag.stderr}');
+    exit(1);
+  }
+
+  print('Deployment sequence initiated.');
 }
