@@ -28,6 +28,9 @@ if(EXISTS "${LTD_BOOST_HEADERS_ROOT}/boost/version.hpp")
   set(BOOST_ROOT           "${LTD_BOOST_HEADERS_ROOT}" CACHE PATH "" FORCE)
   set(BOOST_INCLUDEDIR     "${LTD_BOOST_HEADERS_ROOT}" CACHE PATH "" FORCE)
   set(Boost_NO_SYSTEM_PATHS OFF CACHE BOOL "" FORCE)
+  # Keep Boost headers available even in cross-compiles (Android toolchain may
+  # not pick host include paths unless explicitly injected).
+  include_directories(BEFORE "${LTD_BOOST_HEADERS_ROOT}")
 endif()
 
 # ──────────────────────────────────────────────────────────────────────────────
