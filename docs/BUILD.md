@@ -2,6 +2,21 @@
 
 This guide covers building the native bridge for all supported targets.
 
+## Versioned binary layout (important)
+
+At load time, the Dart hook resolves the package version from `pubspec.yaml` and
+loads binaries from this layout:
+
+`binaries/<platform>/<package-version>/<binary-name>`
+
+Example for package version `1.1.2` on Linux:
+
+`binaries/linux/1.1.2/libtorrent-rasterbar.so`
+
+This prevents accidentally loading stale binaries from an older package version.
+When building manually, pass `-DLTD_BINARY_LAYOUT_VERSION=<package-version>` so
+the output path matches what the hook will load.
+
 ## Prerequisites
 
 - CMake 3.20+
@@ -19,32 +34,35 @@ cd libtorrent_dart
 ```sh
 cmake -G Ninja -S . -B cmake_build/macos \
   -DCMAKE_BUILD_TYPE=Release \
-  -DLTD_BOOST_HEADERS_ROOT=/opt/homebrew/include
+  -DLTD_BOOST_HEADERS_ROOT=/opt/homebrew/include \
+  -DLTD_BINARY_LAYOUT_VERSION=1.1.2
 cmake --build cmake_build/macos --target libtorrent_dart -j8
 ```
 
-Output: `binaries/macos/libtorrent-rasterbar.dylib`
+Output: `binaries/macos/1.1.2/libtorrent-rasterbar.dylib`
 
 ## Linux
 
 ```sh
 cmake -G Ninja -S . -B cmake_build/linux \
   -DCMAKE_BUILD_TYPE=Release \
-  -DLTD_BOOST_HEADERS_ROOT=/usr/include
+  -DLTD_BOOST_HEADERS_ROOT=/usr/include \
+  -DLTD_BINARY_LAYOUT_VERSION=1.1.2
 cmake --build cmake_build/linux --target libtorrent_dart -j8
 ```
 
-Output: `binaries/linux/libtorrent-rasterbar.so`
+Output: `binaries/linux/1.1.2/libtorrent-rasterbar.so`
 
 ## Windows (MSVC)
 
 ```powershell
 cmake -G "Ninja" -S . -B cmake_build/windows `
-  -DCMAKE_BUILD_TYPE=Release
+  -DCMAKE_BUILD_TYPE=Release `
+  -DLTD_BINARY_LAYOUT_VERSION=1.1.2
 cmake --build cmake_build/windows --target libtorrent_dart -j8
 ```
 
-Output: `binaries/windows/torrent-rasterbar.dll`
+Output: `binaries/windows/1.1.2/torrent-rasterbar.dll`
 
 ## Android (NDK)
 
@@ -55,11 +73,12 @@ cmake -G Ninja -S . -B cmake_build/android \
   -DANDROID_PLATFORM=android-24 \
   -DCMAKE_BUILD_TYPE=Release \
   -DLTD_BOOST_HEADERS_ROOT=/opt/homebrew/include \
+  -DLTD_BINARY_LAYOUT_VERSION=1.1.2 \
   -DBUILD_SHARED_LIBS=OFF
 cmake --build cmake_build/android --target libtorrent_dart -j8
 ```
 
-Output: `binaries/android/libtorrent-rasterbar.so`
+Output: `binaries/android/1.1.2/libtorrent-rasterbar.so`
 
 ## iOS
 
@@ -69,11 +88,12 @@ cmake -G Xcode -S . -B cmake_build/ios \
   -DCMAKE_OSX_DEPLOYMENT_TARGET=13.0 \
   -DCMAKE_OSX_ARCHITECTURES=arm64 \
   -DLTD_BOOST_HEADERS_ROOT=/opt/homebrew/include \
+  -DLTD_BINARY_LAYOUT_VERSION=1.1.2 \
   -DCMAKE_BUILD_TYPE=Release
 cmake --build cmake_build/ios --config Release --target libtorrent_dart
 ```
 
-Output: `binaries/ios/libtorrent-rasterbar.a`
+Output: `binaries/ios/1.1.2/Release/libtorrent-rasterbar.a`
 
 ## Dart checks
 
