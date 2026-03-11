@@ -13,6 +13,7 @@ void main(List<String> args) async {
 
     final os = input.config.code.targetOS;
     final packageRoot = input.packageRoot;
+    final packageVersion = _resolvePackageVersion(packageRoot);
 
     // Map from target OS to the pre-built binary path inside the package.
     final Uri binaryUri;
@@ -20,22 +21,22 @@ void main(List<String> args) async {
     switch (os) {
       case OS.macOS:
         binaryUri = packageRoot.resolve(
-          'binaries/macos/libtorrent-rasterbar.dylib',
+          'binaries/macos/$packageVersion/libtorrent-rasterbar.dylib',
         );
         releaseAssetName = 'macos-libtorrent-rasterbar.dylib';
       case OS.android:
         binaryUri = packageRoot.resolve(
-          'binaries/android/libtorrent-rasterbar.so',
+          'binaries/android/$packageVersion/libtorrent-rasterbar.so',
         );
         releaseAssetName = 'android-libtorrent-rasterbar.so';
       case OS.linux:
         binaryUri = packageRoot.resolve(
-          'binaries/linux/libtorrent-rasterbar.so',
+          'binaries/linux/$packageVersion/libtorrent-rasterbar.so',
         );
         releaseAssetName = 'linux-libtorrent-rasterbar.so';
       case OS.windows:
         binaryUri = packageRoot.resolve(
-          'binaries/windows/torrent-rasterbar.dll',
+          'binaries/windows/$packageVersion/torrent-rasterbar.dll',
         );
         releaseAssetName = 'windows-torrent-rasterbar.dll';
       default:
@@ -44,7 +45,7 @@ void main(List<String> args) async {
 
     final binaryFile = File.fromUri(binaryUri);
     if (!binaryFile.existsSync()) {
-      final releaseTag = _resolveReleaseTag(packageRoot);
+      final releaseTag = _resolveReleaseTag(packageVersion);
       await _downloadReleaseBinary(binaryFile, releaseAssetName, releaseTag);
     }
     if (!binaryFile.existsSync()) {
@@ -70,10 +71,7 @@ void main(List<String> args) async {
   });
 }
 
-String _resolveReleaseTag(Uri packageRoot) {
-  final overrideTag = Platform.environment['LTD_RELEASE_TAG'];
-  if (overrideTag != null && overrideTag.isNotEmpty) return overrideTag;
-
+String _resolvePackageVersion(Uri packageRoot) {
   final pubspecFile = File.fromUri(packageRoot.resolve('pubspec.yaml'));
   if (!pubspecFile.existsSync()) {
     throw StateError('pubspec.yaml not found at ${pubspecFile.path}');
@@ -83,7 +81,13 @@ String _resolveReleaseTag(Uri packageRoot) {
   if (version == null || version.isEmpty) {
     throw StateError('Package version missing in pubspec.yaml');
   }
-  return version;
+  return version.trim();
+}
+
+String _resolveReleaseTag(String packageVersion) {
+  final overrideTag = Platform.environment['LTD_RELEASE_TAG'];
+  if (overrideTag != null && overrideTag.isNotEmpty) return overrideTag;
+  return packageVersion;
 }
 
 Future<void> _downloadReleaseBinary(

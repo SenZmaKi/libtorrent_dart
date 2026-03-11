@@ -73,21 +73,25 @@ jobs:
       - name: Configure and build (Linux)
         if: runner.os == 'Linux'
         run: |
+          VERSION="$(grep -E '^version:' pubspec.yaml | awk '{print $2}')"
           cmake -G Ninja -S . -B cmake_build/linux \
             -DCMAKE_BUILD_TYPE=Release \
-            -DLTD_BOOST_HEADERS_ROOT=/usr/include
+            -DLTD_BOOST_HEADERS_ROOT=/usr/include \
+            -DLTD_BINARY_LAYOUT_VERSION="$VERSION"
           cmake --build cmake_build/linux --target libtorrent_dart -j4
 
       - name: Configure and build (macOS)
         if: runner.os == 'macOS'
         run: |
+          VERSION="$(grep -E '^version:' pubspec.yaml | awk '{print $2}')"
           BOOST_ROOT=/opt/homebrew/include
           if [ ! -f "$BOOST_ROOT/boost/version.hpp" ]; then
             BOOST_ROOT=/usr/local/include
           fi
           cmake -G Ninja -S . -B cmake_build/macos \
             -DCMAKE_BUILD_TYPE=Release \
-            -DLTD_BOOST_HEADERS_ROOT="$BOOST_ROOT"
+            -DLTD_BOOST_HEADERS_ROOT="$BOOST_ROOT" \
+            -DLTD_BINARY_LAYOUT_VERSION="$VERSION"
           cmake --build cmake_build/macos --target libtorrent_dart -j4
 
       - name: Configure and build (Windows)
@@ -97,7 +101,8 @@ jobs:
           $ErrorActionPreference = 'Stop'
           $boostDir = Get-ChildItem 'C:\local' -Directory | Where-Object { $_.Name -like 'boost_*' } | Select-Object -First 1
           if (-not $boostDir) { throw 'Boost headers not found under C:\local' }
-          cmake -G Ninja -S . -B cmake_build/windows -DCMAKE_BUILD_TYPE=Release -DLTD_BOOST_HEADERS_ROOT="$($boostDir.FullName)"
+          $version = (Select-String -Path pubspec.yaml -Pattern '^version:\s*(.+)$').Matches[0].Groups[1].Value.Trim()
+          cmake -G Ninja -S . -B cmake_build/windows -DCMAKE_BUILD_TYPE=Release -DLTD_BOOST_HEADERS_ROOT="$($boostDir.FullName)" -DLTD_BINARY_LAYOUT_VERSION="$version"
           cmake --build cmake_build/windows --target libtorrent_dart -j4
 
       - name: Pub get

@@ -72,21 +72,25 @@ jobs:
       - name: Configure and build (Linux)
         if: runner.os == 'Linux'
         run: |
+          VERSION="$(grep -E '^version:' pubspec.yaml | awk '{print $2}')"
           cmake -G Ninja -S . -B cmake_build/linux \
             -DCMAKE_BUILD_TYPE=Release \
-            -DLTD_BOOST_HEADERS_ROOT=/usr/include
+            -DLTD_BOOST_HEADERS_ROOT=/usr/include \
+            -DLTD_BINARY_LAYOUT_VERSION="$VERSION"
           cmake --build cmake_build/linux --target libtorrent_dart -j4
 
       - name: Configure and build (macOS)
         if: runner.os == 'macOS'
         run: |
+          VERSION="$(grep -E '^version:' pubspec.yaml | awk '{print $2}')"
           BOOST_ROOT=/opt/homebrew/include
           if [ ! -f "$BOOST_ROOT/boost/version.hpp" ]; then
             BOOST_ROOT=/usr/local/include
           fi
           cmake -G Ninja -S . -B cmake_build/macos \
             -DCMAKE_BUILD_TYPE=Release \
-            -DLTD_BOOST_HEADERS_ROOT="$BOOST_ROOT"
+            -DLTD_BOOST_HEADERS_ROOT="$BOOST_ROOT" \
+            -DLTD_BINARY_LAYOUT_VERSION="$VERSION"
           cmake --build cmake_build/macos --target libtorrent_dart -j4
 
       - name: Configure and build (Windows)
@@ -96,7 +100,8 @@ jobs:
           $ErrorActionPreference = 'Stop'
           $boostDir = Get-ChildItem 'C:\local' -Directory | Where-Object { $_.Name -like 'boost_*' } | Select-Object -First 1
           if (-not $boostDir) { throw 'Boost headers not found under C:\local' }
-          cmake -G Ninja -S . -B cmake_build/windows -DCMAKE_BUILD_TYPE=Release -DLTD_BOOST_HEADERS_ROOT="$($boostDir.FullName)"
+          $version = (Select-String -Path pubspec.yaml -Pattern '^version:\s*(.+)$').Matches[0].Groups[1].Value.Trim()
+          cmake -G Ninja -S . -B cmake_build/windows -DCMAKE_BUILD_TYPE=Release -DLTD_BOOST_HEADERS_ROOT="$($boostDir.FullName)" -DLTD_BINARY_LAYOUT_VERSION="$version"
           cmake --build cmake_build/windows --target libtorrent_dart -j4
 
       - name: Pub get
@@ -113,21 +118,21 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: linux-binary
-          path: binaries/linux/libtorrent-rasterbar.so
+          path: binaries/linux/*/libtorrent-rasterbar.so
 
       - name: Upload release binary
         if: runner.os == 'macOS'
         uses: actions/upload-artifact@v4
         with:
           name: macos-binary
-          path: binaries/macos/libtorrent-rasterbar.dylib
+          path: binaries/macos/*/libtorrent-rasterbar.dylib
 
       - name: Upload release binary
         if: runner.os == 'Windows'
         uses: actions/upload-artifact@v4
         with:
           name: windows-binary
-          path: binaries/windows/torrent-rasterbar.dll
+          path: binaries/windows/*/torrent-rasterbar.dll
 
   build-android:
     runs-on: ubuntu-latest
@@ -155,6 +160,7 @@ jobs:
 
       - name: Configure and build (Android arm64)
         run: |
+          VERSION="$(grep -E '^version:' pubspec.yaml | awk '{print $2}')"
           test -f "$RUNNER_TEMP/boost-headers/boost/version.hpp"
           cmake -G Ninja -S . -B cmake_build/android \
             -DCMAKE_TOOLCHAIN_FILE="$ANDROID_NDK_HOME/build/cmake/android.toolchain.cmake" \
@@ -162,6 +168,7 @@ jobs:
             -DANDROID_PLATFORM=android-24 \
             -DCMAKE_BUILD_TYPE=Release \
             -DLTD_BOOST_HEADERS_ROOT="$RUNNER_TEMP/boost-headers" \
+            -DLTD_BINARY_LAYOUT_VERSION="$VERSION" \
             -DBoost_INCLUDE_DIR="$RUNNER_TEMP/boost-headers" \
             -DBoost_INCLUDE_DIRS="$RUNNER_TEMP/boost-headers" \
             -DBOOST_ROOT="$RUNNER_TEMP/boost-headers" \
@@ -175,7 +182,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: android-binary
-          path: binaries/android/libtorrent-rasterbar.so
+          path: binaries/android/*/libtorrent-rasterbar.so
 
   build-ios:
     runs-on: macos-latest
@@ -192,11 +199,13 @@ jobs:
 
       - name: Configure and build (iOS arm64)
         run: |
+          VERSION="$(grep -E '^version:' pubspec.yaml | awk '{print $2}')"
           cmake -G Xcode -S . -B cmake_build/ios \
             -DCMAKE_SYSTEM_NAME=iOS \
             -DCMAKE_OSX_DEPLOYMENT_TARGET=13.0 \
             -DCMAKE_OSX_ARCHITECTURES=arm64 \
             -DLTD_BOOST_HEADERS_ROOT=/opt/homebrew/include \
+            -DLTD_BINARY_LAYOUT_VERSION="$VERSION" \
             -DCMAKE_BUILD_TYPE=Release
           cmake --build cmake_build/ios --config Release --target libtorrent_dart
 
@@ -204,7 +213,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ios-binary
-          path: binaries/ios/Release/libtorrent-rasterbar.a
+          path: binaries/ios/*/Release/libtorrent-rasterbar.a
 
   publish-release:
     runs-on: ubuntu-latest

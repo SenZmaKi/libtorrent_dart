@@ -22,6 +22,8 @@ set(LTD_BOOST_HEADERS_ROOT "/opt/homebrew/include" CACHE PATH
 
 set(LTD_OUTPUT_DIR "${CMAKE_CURRENT_LIST_DIR}/binaries" CACHE PATH
   "Root directory where platform-specific prebuilt libraries are placed")
+set(LTD_BINARY_LAYOUT_VERSION "" CACHE STRING
+  "Optional version segment under each platform output directory")
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Boost headers
@@ -88,26 +90,31 @@ set_target_properties(libtorrent_dart PROPERTIES
 # Per-platform output directories and post-build fixups
 # ──────────────────────────────────────────────────────────────────────────────
 
+set(_ltd_version_suffix "")
+if(NOT LTD_BINARY_LAYOUT_VERSION STREQUAL "")
+  set(_ltd_version_suffix "/${LTD_BINARY_LAYOUT_VERSION}")
+endif()
+
 if(IOS)
   set_target_properties(libtorrent_dart PROPERTIES
-    ARCHIVE_OUTPUT_DIRECTORY "${LTD_OUTPUT_DIR}/ios"
+    ARCHIVE_OUTPUT_DIRECTORY "${LTD_OUTPUT_DIR}/ios${_ltd_version_suffix}"
   )
 elseif(APPLE)
   set_target_properties(libtorrent_dart PROPERTIES
-    LIBRARY_OUTPUT_DIRECTORY "${LTD_OUTPUT_DIR}/macos"
+    LIBRARY_OUTPUT_DIRECTORY "${LTD_OUTPUT_DIR}/macos${_ltd_version_suffix}"
   )
 elseif(ANDROID)
   set_target_properties(libtorrent_dart PROPERTIES
-    LIBRARY_OUTPUT_DIRECTORY "${LTD_OUTPUT_DIR}/android"
+    LIBRARY_OUTPUT_DIRECTORY "${LTD_OUTPUT_DIR}/android${_ltd_version_suffix}"
   )
 elseif(WIN32)
   set_target_properties(libtorrent_dart PROPERTIES
-    RUNTIME_OUTPUT_DIRECTORY "${LTD_OUTPUT_DIR}/windows"
+    RUNTIME_OUTPUT_DIRECTORY "${LTD_OUTPUT_DIR}/windows${_ltd_version_suffix}"
     OUTPUT_NAME torrent-rasterbar
   )
 else()
   # Linux / other POSIX
   set_target_properties(libtorrent_dart PROPERTIES
-    LIBRARY_OUTPUT_DIRECTORY "${LTD_OUTPUT_DIR}/linux"
+    LIBRARY_OUTPUT_DIRECTORY "${LTD_OUTPUT_DIR}/linux${_ltd_version_suffix}"
   )
 endif()
