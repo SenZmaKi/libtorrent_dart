@@ -227,7 +227,12 @@ jobs:
           cp release-assets/macos-binary/libtorrent-rasterbar.dylib release-assets/macos-libtorrent-rasterbar.dylib
           cp release-assets/windows-binary/torrent-rasterbar.dll release-assets/windows-torrent-rasterbar.dll
           cp release-assets/android-binary/libtorrent-rasterbar.so release-assets/android-libtorrent-rasterbar.so
-          cp release-assets/ios-binary/libtorrent-rasterbar.a release-assets/ios-libtorrent-rasterbar.a
+          IOS_LIB="$(find release-assets/ios-binary -type f -name '*.a' | head -n 1)"
+          if [ -z "$IOS_LIB" ]; then
+            echo "No iOS static library found in ios-binary artifact" >&2
+            exit 1
+          fi
+          cp "$IOS_LIB" release-assets/ios-libtorrent-rasterbar.a
 
       - name: Create or update release
         env:
