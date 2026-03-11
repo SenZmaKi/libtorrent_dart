@@ -129,9 +129,76 @@ jobs:
           name: windows-binary
           path: binaries/windows/torrent-rasterbar.dll
 
+  build-android:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android NDK
+        run: |
+          yes | sdkmanager --licenses
+          sdkmanager "ndk;26.3.11579264"
+          echo "ANDROID_NDK_HOME=$ANDROID_SDK_ROOT/ndk/26.3.11579264" >> "$GITHUB_ENV"
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake ninja-build libboost-dev
+
+      - name: Configure and build (Android arm64)
+        run: |
+          cmake -G Ninja -S . -B cmake_build/android \
+            -DCMAKE_TOOLCHAIN_FILE="$ANDROID_NDK_HOME/build/cmake/android.toolchain.cmake" \
+            -DANDROID_ABI=arm64-v8a \
+            -DANDROID_PLATFORM=android-24 \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DLTD_BOOST_HEADERS_ROOT=/usr/include
+          cmake --build cmake_build/android --target libtorrent_dart -j4
+
+      - name: Upload Android binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-binary
+          path: binaries/android/libtorrent-rasterbar.so
+
+  build-ios:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install macOS dependencies
+        run: |
+          brew update
+          brew install cmake ninja boost openssl@3
+
+      - name: Configure and build (iOS arm64)
+        run: |
+          cmake -G Xcode -S . -B cmake_build/ios \
+            -DCMAKE_SYSTEM_NAME=iOS \
+            -DCMAKE_OSX_DEPLOYMENT_TARGET=13.0 \
+            -DCMAKE_OSX_ARCHITECTURES=arm64 \
+            -DLTD_BOOST_HEADERS_ROOT=/opt/homebrew/include \
+            -DCMAKE_BUILD_TYPE=Release
+          cmake --build cmake_build/ios --config Release --target libtorrent_dart
+
+      - name: Upload iOS binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-binary
+          path: binaries/ios/libtorrent-rasterbar.a
+
   publish-release:
     runs-on: ubuntu-latest
-    needs: build-and-test
+    needs: [build-and-test, build-android, build-ios]
     permissions:
       contents: write
 
@@ -149,6 +216,8 @@ jobs:
           cp release-assets/linux-binary/libtorrent-rasterbar.so release-assets/linux-libtorrent-rasterbar.so
           cp release-assets/macos-binary/libtorrent-rasterbar.dylib release-assets/macos-libtorrent-rasterbar.dylib
           cp release-assets/windows-binary/torrent-rasterbar.dll release-assets/windows-torrent-rasterbar.dll
+          cp release-assets/android-binary/libtorrent-rasterbar.so release-assets/android-libtorrent-rasterbar.so
+          cp release-assets/ios-binary/libtorrent-rasterbar.a release-assets/ios-libtorrent-rasterbar.a
 
       - name: Create or update release
         env:
@@ -160,12 +229,16 @@ jobs:
               release-assets/linux-libtorrent-rasterbar.so \
               release-assets/macos-libtorrent-rasterbar.dylib \
               release-assets/windows-torrent-rasterbar.dll \
+              release-assets/android-libtorrent-rasterbar.so \
+              release-assets/ios-libtorrent-rasterbar.a \
               --clobber
           else
             gh release create "$TAG_NAME" \
               release-assets/linux-libtorrent-rasterbar.so \
               release-assets/macos-libtorrent-rasterbar.dylib \
               release-assets/windows-torrent-rasterbar.dll \
+              release-assets/android-libtorrent-rasterbar.so \
+              release-assets/ios-libtorrent-rasterbar.a \
               --title "$TAG_NAME" \
               --target "${{ github.sha }}" \
               --generate-notes
