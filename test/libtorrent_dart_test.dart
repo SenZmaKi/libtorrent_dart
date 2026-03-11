@@ -33,12 +33,12 @@ void main() {
     );
 
     await _waitForStatus(statuses);
-    final latestStatus = statuses.isNotEmpty ? statuses.last : torrent.getStatus();
     await sub.cancel();
+    final sessionStatus = session.getStatus();
     session.close();
 
-    expect(latestStatus.progress, greaterThanOrEqualTo(0));
-    expect(latestStatus.progress, lessThanOrEqualTo(1));
+    expect(sessionStatus.downloadRate, greaterThanOrEqualTo(0));
+    expect(sessionStatus.uploadRate, greaterThanOrEqualTo(0));
   });
 
   test('pause and resume bridge calls are callable', () async {
