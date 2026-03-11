@@ -34,7 +34,6 @@ void main() {
 
     await _waitForStatus(statuses);
     await sub.cancel();
-    torrent.cancel(deleteFiles: false);
     session.close();
 
     expect(statuses, isNotEmpty);

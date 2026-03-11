@@ -50,6 +50,9 @@ endif()
 # Build libtorrent as a static library so released wrapper binaries don't rely
 # on an extra libtorrent shared library being present at runtime.
 set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
+# Ensure static dependencies are built with PIC so they can be linked into the
+# wrapper shared library on Linux/macOS.
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 add_subdirectory(thirdparty/libtorrent thirdparty/libtorrent-build)
 
