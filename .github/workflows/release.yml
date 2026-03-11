@@ -232,15 +232,21 @@ jobs:
 
       - name: Prepare release asset names
         run: |
-          cp release-assets/linux-binary/libtorrent-rasterbar.so release-assets/linux-libtorrent-rasterbar.so
-          cp release-assets/macos-binary/libtorrent-rasterbar.dylib release-assets/macos-libtorrent-rasterbar.dylib
-          cp release-assets/windows-binary/torrent-rasterbar.dll release-assets/windows-torrent-rasterbar.dll
-          cp release-assets/android-binary/libtorrent-rasterbar.so release-assets/android-libtorrent-rasterbar.so
+          LINUX_LIB="$(find release-assets/linux-binary -type f -name 'libtorrent-rasterbar.so' | head -n 1)"
+          MACOS_LIB="$(find release-assets/macos-binary -type f -name 'libtorrent-rasterbar.dylib' | head -n 1)"
+          WINDOWS_LIB="$(find release-assets/windows-binary -type f -name 'torrent-rasterbar.dll' | head -n 1)"
+          ANDROID_LIB="$(find release-assets/android-binary -type f -name 'libtorrent-rasterbar.so' | head -n 1)"
           IOS_LIB="$(find release-assets/ios-binary -type f -name '*.a' | head -n 1)"
-          if [ -z "$IOS_LIB" ]; then
-            echo "No iOS static library found in ios-binary artifact" >&2
+
+          if [ -z "$LINUX_LIB" ] || [ -z "$MACOS_LIB" ] || [ -z "$WINDOWS_LIB" ] || [ -z "$ANDROID_LIB" ] || [ -z "$IOS_LIB" ]; then
+            echo "One or more release binaries were not found in downloaded artifacts" >&2
             exit 1
           fi
+
+          cp "$LINUX_LIB" release-assets/linux-libtorrent-rasterbar.so
+          cp "$MACOS_LIB" release-assets/macos-libtorrent-rasterbar.dylib
+          cp "$WINDOWS_LIB" release-assets/windows-torrent-rasterbar.dll
+          cp "$ANDROID_LIB" release-assets/android-libtorrent-rasterbar.so
           cp "$IOS_LIB" release-assets/ios-libtorrent-rasterbar.a
 
       - name: Create or update release
