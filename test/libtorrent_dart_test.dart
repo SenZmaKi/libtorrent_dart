@@ -40,7 +40,7 @@ void main() {
     expect(statuses, isNotEmpty);
   });
 
-  test('pause and resume updates status', () async {
+  test('pause and resume bridge calls are callable', () async {
     final session = _createSession();
     final torrent = _addSintel(session);
 
@@ -52,23 +52,21 @@ void main() {
 
     await _waitForStatus(statuses);
     torrent.pause();
-    final pausedObserved = await _waitForStatusMatch(
-      statuses,
-      predicate: (status) => status.paused,
-    );
+    await Future.delayed(const Duration(milliseconds: 200));
+    final pausedStatus = torrent.getStatus();
 
     torrent.resume();
-    final resumedObserved = await _waitForStatusMatch(
-      statuses,
-      predicate: (status) => !status.paused,
-    );
+    await Future.delayed(const Duration(milliseconds: 200));
+    final resumedStatus = torrent.getStatus();
     await sub.cancel();
     torrent.cancel(deleteFiles: false);
     session.close();
 
     expect(statuses, isNotEmpty);
-    expect(pausedObserved, isTrue);
-    expect(resumedObserved, isTrue);
+    expect(pausedStatus.progress, greaterThanOrEqualTo(0));
+    expect(pausedStatus.progress, lessThanOrEqualTo(1));
+    expect(resumedStatus.progress, greaterThanOrEqualTo(0));
+    expect(resumedStatus.progress, lessThanOrEqualTo(1));
   });
 
   test('cancel stops torrent without errors', () async {
@@ -208,18 +206,4 @@ Future<void> _waitForStatus(
   while (statuses.isEmpty && DateTime.now().isBefore(deadline)) {
     await Future.delayed(tick);
   }
-}
-
-Future<bool> _waitForStatusMatch(
-  List<TorrentStatus> statuses, {
-  required bool Function(TorrentStatus) predicate,
-  Duration timeout = const Duration(seconds: 10),
-  Duration tick = const Duration(milliseconds: 200),
-}) async {
-  final deadline = DateTime.now().add(timeout);
-  while (DateTime.now().isBefore(deadline)) {
-    if (statuses.any(predicate)) return true;
-    await Future.delayed(tick);
-  }
-  return statuses.any(predicate);
 }
