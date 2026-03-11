@@ -146,14 +146,31 @@ Future<void> _downloadReleaseBinary(
     }
 
     final tempFile = File('${destination.path}.tmp');
-    if (tempFile.existsSync()) tempFile.deleteSync();
+    if (tempFile.existsSync()) {
+      try {
+        tempFile.deleteSync();
+      } catch (_) {
+        // If Windows still has a lock from a previous failed run,
+        // we might need to wait or manual intervention is required.
+      }
+    }
+
     try {
-      await tempFile.openWrite().addStream(assetRes);
+      final sink = tempFile.openWrite();
+      await sink.addStream(assetRes);
+      await sink.close(); // Ensure the file handle is released
+
       if (destination.existsSync()) destination.deleteSync();
       tempFile.renameSync(destination.path);
       stdout.writeln('Done.');
     } catch (_) {
-      if (tempFile.existsSync()) tempFile.deleteSync();
+      if (tempFile.existsSync()) {
+        try {
+          tempFile.deleteSync();
+        } catch (_) {
+          // Swallow cleanup errors to avoid masking the primary exception
+        }
+      }
       rethrow;
     }
   } finally {
