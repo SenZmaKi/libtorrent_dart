@@ -1,3 +1,10 @@
+# libtorrent_dart
+binaries/android/
+binaries/macos/
+binaries/ios/
+binaries/linux/
+binaries/windows/
+
 # Dart
 .dart_tool/
 .packages

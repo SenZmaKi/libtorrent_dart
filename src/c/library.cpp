@@ -41,9 +41,13 @@ POSSIBILITY OF SUCH DAMAGE.
 #include "libtorrent/torrent_status.hpp"
 
 #include <algorithm>
+#include <exception>
 #include <cstdio>
+#include <cstring>
 #include <libtorrent.h>
+#include <new>
 #include <stdarg.h>
+#include <string>
 #include <vector>
 
 namespace {
@@ -56,6 +60,8 @@ struct progress_callback_entry {
 };
 
 std::vector<progress_callback_entry> progress_callbacks;
+thread_local int g_last_error_code = 0;
+thread_local std::string g_last_error_message;
 
 int find_handle(lt::torrent_handle h) {
   std::vector<lt::torrent_handle>::const_iterator i =
@@ -113,6 +119,91 @@ void copy_proxy_setting(lt::aux::proxy_settings *s, proxy_setting const *ps) {
   s->type = (lt::settings_pack::proxy_type_t)ps->type;
 }
 
+void clear_last_error() {
+  g_last_error_code = 0;
+  g_last_error_message.clear();
+}
+
+void set_last_error(int code, char const *message) {
+  g_last_error_code = code;
+  g_last_error_message = message ? message : "";
+}
+
+void set_last_error(int code, std::string const &message) {
+  g_last_error_code = code;
+  g_last_error_message = message;
+}
+
+lt_tag_item const *find_tag_item(lt_tag_item const *items, int const num_items
+                                 , int const tag) {
+  if (!items || num_items <= 0) return nullptr;
+  for (int i = 0; i < num_items; ++i) {
+    if (items[i].tag == tag) return &items[i];
+  }
+  return nullptr;
+}
+
+int apply_session_setting_pack_items(lt::settings_pack &pack
+  , lt_tag_item const *items, int const num_items) {
+  for (int i = 0; i < num_items; ++i) {
+    lt_tag_item const &item = items[i];
+    switch (item.tag) {
+    case SET_UPLOAD_RATE_LIMIT:
+      pack.set_int(lt::settings_pack::upload_rate_limit, item.int_value);
+      break;
+    case SET_DOWNLOAD_RATE_LIMIT:
+      pack.set_int(lt::settings_pack::download_rate_limit, item.int_value);
+      break;
+    case SET_LOCAL_UPLOAD_RATE_LIMIT:
+      pack.set_int(lt::settings_pack::local_upload_rate_limit, item.int_value);
+      break;
+    case SET_LOCAL_DOWNLOAD_RATE_LIMIT:
+      pack.set_int(lt::settings_pack::local_download_rate_limit, item.int_value);
+      break;
+    case SET_MAX_UPLOAD_SLOTS:
+      pack.set_int(lt::settings_pack::unchoke_slots_limit, item.int_value);
+      break;
+    case SET_MAX_CONNECTIONS:
+      pack.set_int(lt::settings_pack::connections_limit, item.int_value);
+      break;
+    case SET_HALF_OPEN_LIMIT:
+      pack.set_int(lt::settings_pack::half_open_limit, item.int_value);
+      break;
+    case SETTINGS_INT:
+      pack.set_int(item.int_value, item.size);
+      break;
+    case SETTINGS_BOOL:
+      pack.set_bool(item.int_value, item.size != 0);
+      break;
+    case SETTINGS_STRING:
+      if (!item.string_value) return -1;
+      pack.set_str(item.int_value, item.string_value);
+      break;
+    case SET_PEER_PROXY:
+    case SET_WEB_SEED_PROXY:
+    case SET_TRACKER_PROXY:
+    case SET_DHT_PROXY:
+    case SET_PROXY: {
+      if (!item.ptr_value) return -1;
+      lt::aux::proxy_settings ps;
+      copy_proxy_setting(&ps, reinterpret_cast<proxy_setting const *>(item.ptr_value));
+      pack.set_str(lt::settings_pack::proxy_hostname, ps.hostname);
+      pack.set_int(lt::settings_pack::proxy_port, ps.port);
+      pack.set_str(lt::settings_pack::proxy_username, ps.username);
+      pack.set_str(lt::settings_pack::proxy_password, ps.password);
+      pack.set_int(lt::settings_pack::proxy_type, ps.type);
+      break;
+    }
+    case SET_ALERT_MASK:
+      pack.set_int(lt::settings_pack::alert_mask, item.int_value);
+      break;
+    default:
+      break;
+    }
+  }
+  return 0;
+}
+
 } // namespace
 
 extern "C" {
@@ -120,6 +211,8 @@ extern "C" {
 TORRENT_EXPORT void torrent_clear_progress_callback(int tor);
 
 TORRENT_EXPORT void *session_create(int tag, ...) {
+  clear_last_error();
+  try {
   using namespace lt;
 
   va_list lp;
@@ -163,21 +256,92 @@ TORRENT_EXPORT void *session_create(int tag, ...) {
     pack.set_str(settings_pack::listen_interfaces, buf);
   }
 
-  return new (std::nothrow) session(session_params(pack));
+  session *ret = new (std::nothrow) session(session_params(pack));
+  if (ret == nullptr)
+    set_last_error(-1, "failed to allocate session");
+  return ret;
+  } catch (std::exception const &e) {
+    set_last_error(-1, e.what());
+    return nullptr;
+  } catch (...) {
+    set_last_error(-1, "unknown exception in session_create");
+    return nullptr;
+  }
 }
 
 TORRENT_EXPORT void *session_create_default(void) {
   return session_create(TAG_END);
 }
 
+TORRENT_EXPORT void *session_create_items(lt_tag_item const *items
+  , int const num_items) {
+  clear_last_error();
+  try {
+    using namespace lt;
+    if (!items || num_items < 0) {
+      set_last_error(-1, "invalid session_create_items arguments");
+      return nullptr;
+    }
+    int listen_port = 0;
+    int listen_port_end = 0;
+    char const *listen_interface = "0.0.0.0";
+    int alert_mask = alert::error_notification;
+
+    for (int i = 0; i < num_items; ++i) {
+      lt_tag_item const &item = items[i];
+      switch (item.tag) {
+      case SES_LISTENPORT:
+        listen_port = item.int_value;
+        break;
+      case SES_LISTENPORT_END:
+        listen_port_end = item.int_value;
+        break;
+      case SES_ALERT_MASK:
+        alert_mask = item.int_value;
+        break;
+      case SES_LISTEN_INTERFACE:
+        if (item.string_value) listen_interface = item.string_value;
+        break;
+      default:
+        break;
+      }
+    }
+
+    settings_pack pack;
+    pack.set_int(settings_pack::alert_mask, alert_mask);
+    if (listen_port > 0) {
+      int const end_port = listen_port_end > 0 ? listen_port_end : listen_port;
+      char buf[64];
+      snprintf(buf, sizeof(buf), "%s:%d-%d", listen_interface, listen_port, end_port);
+      pack.set_str(settings_pack::listen_interfaces, buf);
+    }
+
+    session *ret = new (std::nothrow) session(session_params(pack));
+    if (ret == nullptr) set_last_error(-1, "failed to allocate session");
+    return ret;
+  } catch (std::exception const &e) {
+    set_last_error(-1, e.what());
+    return nullptr;
+  } catch (...) {
+    set_last_error(-1, "unknown exception in session_create_items");
+    return nullptr;
+  }
+}
+
 TORRENT_EXPORT void session_close(void *ses) { delete (lt::session *)ses; }
 
 TORRENT_EXPORT int session_add_torrent(void *ses, int tag, ...) {
+  clear_last_error();
+  try {
   using namespace lt;
 
   va_list lp;
   va_start(lp, tag);
   session *s = (session *)ses;
+  if (!s) {
+    set_last_error(-1, "invalid session handle");
+    return -1;
+  }
   add_torrent_params params;
 
   char const *torrent_data = 0;
@@ -193,8 +357,9 @@ TORRENT_EXPORT int session_add_torrent(void *ses, int tag, ...) {
   while (tag != TAG_END) {
     switch (tag) {
     case TOR_FILENAME:
-      params.ti.reset(new (std::nothrow)
-                          torrent_info(va_arg(lp, char const *), ec));
+      params.ti.reset(new (std::nothrow) torrent_info(va_arg(lp, char const *), ec));
+      if (ec)
+        set_last_error(-1, ec.message());
       break;
     case TOR_TORRENT:
       torrent_data = va_arg(lp, char const *);
@@ -267,8 +432,7 @@ TORRENT_EXPORT int session_add_torrent(void *ses, int tag, ...) {
   va_end(lp);
 
   if (!params.ti && torrent_data && torrent_size)
-    params.ti.reset(new (std::nothrow)
-                        torrent_info(torrent_data, torrent_size));
+    params.ti.reset(new (std::nothrow) torrent_info(torrent_data, torrent_size, ec));
 
   if (resume_data && resume_size) {
     params.resume_data.assign(resume_data, resume_data + resume_size);
@@ -276,10 +440,20 @@ TORRENT_EXPORT int session_add_torrent(void *ses, int tag, ...) {
   torrent_handle h;
   if (magnet_url) {
     parse_magnet_uri(magnet_url, params, ec);
+    if (ec) {
+      set_last_error(-1, ec.message());
+      return -1;
+    }
   }
   h = s->add_torrent(params, ec);
+  if (ec) {
+    set_last_error(-1, ec.message());
+    return -1;
+  }
 
   if (!h.is_valid()) {
+    if (g_last_error_message.empty())
+      set_last_error(-1, "failed to add torrent");
     return -1;
   }
 
@@ -288,14 +462,25 @@ TORRENT_EXPORT int session_add_torrent(void *ses, int tag, ...) {
     i = add_handle(h);
 
   return i;
+  } catch (std::exception const &e) {
+    set_last_error(-1, e.what());
+    return -1;
+  } catch (...) {
+    set_last_error(-1, "unknown exception in session_add_torrent");
+    return -1;
+  }
 }
 
 TORRENT_EXPORT int session_add_magnet(void *ses, char const *magnet_uri,
                                       char const *save_path,
                                       int download_rate_limit,
                                       int upload_rate_limit) {
+  clear_last_error();
   if (!ses || !magnet_uri || !save_path)
+  {
+    set_last_error(-1, "invalid add magnet arguments");
     return -1;
+  }
   int tor = session_add_torrent(ses, TOR_MAGNETLINK, magnet_uri, TOR_SAVE_PATH,
                                 save_path, TAG_END);
   if (tor < 0)
@@ -305,6 +490,136 @@ TORRENT_EXPORT int session_add_magnet(void *ses, char const *magnet_uri,
                          SET_UPLOAD_RATE_LIMIT, upload_rate_limit, TAG_END);
   }
   return tor;
+}
+
+TORRENT_EXPORT int session_add_torrent_items(void *ses
+  , lt_tag_item const *items, int const num_items) {
+  clear_last_error();
+  try {
+    using namespace lt;
+    session *s = reinterpret_cast<session *>(ses);
+    if (!s || !items || num_items <= 0) {
+      set_last_error(-1, "invalid add_torrent_items arguments");
+      return -1;
+    }
+
+    add_torrent_params params;
+    error_code ec;
+    char const *torrent_data = nullptr;
+    int torrent_size = 0;
+    char const *resume_data = nullptr;
+    int resume_size = 0;
+    char const *magnet_url = nullptr;
+
+    for (int i = 0; i < num_items; ++i) {
+      lt_tag_item const &item = items[i];
+      switch (item.tag) {
+      case TOR_FILENAME:
+        if (!item.string_value) break;
+        params.ti.reset(new (std::nothrow) torrent_info(item.string_value, ec));
+        if (ec) {
+          set_last_error(-1, ec.message());
+          return -1;
+        }
+        break;
+      case TOR_TORRENT:
+        torrent_data = reinterpret_cast<char const *>(item.ptr_value);
+        if (item.size > 0) torrent_size = item.size;
+        break;
+      case TOR_TORRENT_SIZE:
+        torrent_size = item.int_value;
+        break;
+      case TOR_INFOHASH:
+        if (!item.ptr_value) break;
+        params.info_hashes.v1 = lt::sha1_hash(reinterpret_cast<char const *>(item.ptr_value));
+        break;
+      case TOR_INFOHASH_HEX: {
+        if (!item.string_value) break;
+        lt::sha1_hash ih;
+        lt::from_hex(item.string_value, 40, reinterpret_cast<char *>(ih.data()));
+        params.info_hashes.v1 = ih;
+        break;
+      }
+      case TOR_MAGNETLINK:
+        magnet_url = item.string_value;
+        break;
+      case TOR_TRACKER_URL:
+        if (!item.string_value) break;
+        params.trackers.push_back(item.string_value);
+        params.tracker_tiers.push_back(0);
+        break;
+      case TOR_RESUME_DATA:
+        resume_data = reinterpret_cast<char const *>(item.ptr_value);
+        if (item.size > 0) resume_size = item.size;
+        break;
+      case TOR_RESUME_DATA_SIZE:
+        resume_size = item.int_value;
+        break;
+      case TOR_SAVE_PATH:
+        if (item.string_value) params.save_path = item.string_value;
+        break;
+      case TOR_NAME:
+        if (item.string_value) params.name = item.string_value;
+        break;
+      case TOR_PAUSED:
+        if (item.int_value != 0) params.flags |= lt::torrent_flags::paused;
+        break;
+      case TOR_AUTO_MANAGED:
+        if (item.int_value != 0) params.flags |= lt::torrent_flags::auto_managed;
+        break;
+      case TOR_DUPLICATE_IS_ERROR:
+        if (item.int_value != 0) params.flags |= lt::torrent_flags::duplicate_is_error;
+        break;
+      case TOR_USER_DATA:
+        params.userdata = const_cast<void *>(item.ptr_value);
+        break;
+      case TOR_SEED_MODE:
+        if (item.int_value != 0) params.flags |= lt::torrent_flags::seed_mode;
+        break;
+      case TOR_OVERRIDE_RESUME_DATA:
+        if (item.int_value != 0) params.flags |= lt::torrent_flags::override_resume_data;
+        break;
+      case TOR_STORAGE_MODE:
+        params.storage_mode = static_cast<lt::storage_mode_t>(item.int_value);
+        break;
+      default:
+        break;
+      }
+    }
+
+    if (!params.ti && torrent_data && torrent_size > 0) {
+      params.ti.reset(new (std::nothrow) torrent_info(torrent_data, torrent_size, ec));
+      if (ec) {
+        set_last_error(-1, ec.message());
+        return -1;
+      }
+    }
+    if (resume_data && resume_size > 0) {
+      params.resume_data.assign(resume_data, resume_data + resume_size);
+    }
+    if (magnet_url) {
+      parse_magnet_uri(magnet_url, params, ec);
+      if (ec) {
+        set_last_error(-1, ec.message());
+        return -1;
+      }
+    }
+
+    torrent_handle h = s->add_torrent(params, ec);
+    if (ec || !h.is_valid()) {
+      set_last_error(-1, ec ? ec.message() : "failed to add torrent");
+      return -1;
+    }
+    int i = find_handle(h);
+    if (i == -1) i = add_handle(h);
+    return i;
+  } catch (std::exception const &e) {
+    set_last_error(-1, e.what());
+    return -1;
+  } catch (...) {
+    set_last_error(-1, "unknown exception in session_add_torrent_items");
+    return -1;
+  }
 }
 
 TORRENT_EXPORT void session_remove_torrent(void *ses, int tor, int flags) {
@@ -323,9 +638,15 @@ TORRENT_EXPORT void session_remove_torrent(void *ses, int tor, int flags) {
 
 TORRENT_EXPORT int session_pop_alert(void *ses, char *dest, int len,
                                      int *category) {
+  clear_last_error();
+  try {
   using namespace lt;
 
   session *s = (session *)ses;
+  if (!s || !dest || len <= 0) {
+    set_last_error(-1, "invalid pop_alert arguments");
+    return -1;
+  }
   std::vector<alert *> alerts;
   s->pop_alerts(&alerts);
   if (alerts.empty())
@@ -338,12 +659,25 @@ TORRENT_EXPORT int session_pop_alert(void *ses, char *dest, int len,
   dest[len - 1] = 0;
 
   return 0;
+  } catch (std::exception const &e) {
+    set_last_error(-1, e.what());
+    return -1;
+  } catch (...) {
+    set_last_error(-1, "unknown exception in session_pop_alert");
+    return -1;
+  }
 }
 
 TORRENT_EXPORT int session_set_settings(void *ses, int tag, ...) {
+  clear_last_error();
+  try {
   using namespace lt;
 
   session *s = (session *)ses;
+  if (!s) {
+    set_last_error(-1, "invalid session handle");
+    return -1;
+  }
 
   va_list lp;
   va_start(lp, tag);
@@ -425,12 +759,24 @@ TORRENT_EXPORT int session_set_settings(void *ses, int tag, ...) {
     s->apply_settings(pack);
   }
   return 0;
+  } catch (std::exception const &e) {
+    set_last_error(-1, e.what());
+    return -1;
+  } catch (...) {
+    set_last_error(-1, "unknown exception in session_set_settings");
+    return -1;
+  }
 }
 
 TORRENT_EXPORT int session_get_setting(void *ses, int tag, void *value,
                                        int *value_size) {
+  clear_last_error();
   using namespace lt;
   session *s = (session *)ses;
+  if (!s || !value || !value_size) {
+    set_last_error(-1, "invalid get_setting arguments");
+    return -1;
+  }
 
   lt::settings_pack pack = s->get_settings();
   int setting = -1;
@@ -476,9 +822,41 @@ TORRENT_EXPORT int session_set_string_setting(void *ses, int tag_type, int tag,
   return session_set_settings(ses, tag_type, tag, value, TAG_END);
 }
 
+TORRENT_EXPORT int session_set_settings_items(void *ses
+  , lt_tag_item const *items, int const num_items) {
+  clear_last_error();
+  try {
+    using namespace lt;
+    session *s = reinterpret_cast<session *>(ses);
+    if (!s || !items || num_items <= 0) {
+      set_last_error(-1, "invalid set_settings_items arguments");
+      return -1;
+    }
+    settings_pack pack;
+    int const rc = apply_session_setting_pack_items(pack, items, num_items);
+    if (rc != 0) {
+      set_last_error(-1, "invalid settings items");
+      return -1;
+    }
+    s->apply_settings(pack);
+    return 0;
+  } catch (std::exception const &e) {
+    set_last_error(-1, e.what());
+    return -1;
+  } catch (...) {
+    set_last_error(-1, "unknown exception in session_set_settings_items");
+    return -1;
+  }
+}
+
 TORRENT_EXPORT int session_get_status(void *sesptr, struct session_status *s,
                                       int struct_size) {
+  clear_last_error();
   lt::session *ses = (lt::session *)sesptr;
+  if (!ses || !s) {
+    set_last_error(-1, "invalid session status arguments");
+    return -1;
+  }
 
   lt::session_status ss = ses->status();
   if (struct_size != sizeof(session_status))
@@ -536,9 +914,13 @@ TORRENT_EXPORT int session_get_status(void *sesptr, struct session_status *s,
 
 TORRENT_EXPORT int torrent_get_status(int tor, torrent_status *s,
                                       int struct_size) {
+  clear_last_error();
   lt::torrent_handle h = get_handle(tor);
   if (!h.is_valid())
+  {
+    set_last_error(-1, "invalid torrent handle");
     return -1;
+  }
 
   lt::torrent_status ts = h.status();
 
@@ -598,32 +980,47 @@ TORRENT_EXPORT int torrent_get_status(int tor, torrent_status *s,
 }
 
 TORRENT_EXPORT int torrent_pause(int tor) {
+  clear_last_error();
   using namespace lt;
   lt::torrent_handle h = get_handle(tor);
   if (!h.is_valid())
+  {
+    set_last_error(-1, "invalid torrent handle");
     return -1;
+  }
   h.pause();
   return 0;
 }
 
 TORRENT_EXPORT int torrent_resume(int tor) {
+  clear_last_error();
   using namespace lt;
   lt::torrent_handle h = get_handle(tor);
   if (!h.is_valid())
+  {
+    set_last_error(-1, "invalid torrent handle");
     return -1;
+  }
   h.resume();
   return 0;
 }
 
 TORRENT_EXPORT int torrent_cancel(void *ses, int tor, int delete_files) {
+  clear_last_error();
   using namespace lt;
   lt::torrent_handle h = get_handle(tor);
   if (!h.is_valid())
+  {
+    set_last_error(-1, "invalid torrent handle");
     return -1;
+  }
   torrent_clear_progress_callback(tor);
   lt::session *s = (lt::session *)ses;
   if (!s)
+  {
+    set_last_error(-1, "invalid session handle");
     return -1;
+  }
   lt::remove_flags_t flags = {};
   if (delete_files)
     flags |= lt::session::delete_files;
@@ -634,12 +1031,19 @@ TORRENT_EXPORT int torrent_cancel(void *ses, int tor, int delete_files) {
 TORRENT_EXPORT int torrent_set_progress_callback(int tor,
                                                  torrent_progress_callback cb,
                                                  void *userdata) {
+  clear_last_error();
   using namespace lt;
   lt::torrent_handle h = get_handle(tor);
   if (!h.is_valid())
+  {
+    set_last_error(-1, "invalid torrent handle");
     return -1;
+  }
   if (!cb)
+  {
+    set_last_error(-1, "callback must not be null");
     return -1;
+  }
 
   ensure_progress_callback_capacity(tor);
   progress_callback_entry *entry = get_progress_callback(tor);
@@ -651,9 +1055,13 @@ TORRENT_EXPORT int torrent_set_progress_callback(int tor,
 }
 
 TORRENT_EXPORT int torrent_poll_progress(int tor) {
+  clear_last_error();
   progress_callback_entry *entry = get_progress_callback(tor);
   if (!entry || !entry->cb)
+  {
+    set_last_error(-1, "progress callback not set");
     return -1;
+  }
   torrent_status ts;
   int rc = torrent_get_status(tor, &ts, sizeof(torrent_status));
   if (rc != 0)
@@ -671,10 +1079,15 @@ TORRENT_EXPORT void torrent_clear_progress_callback(int tor) {
 }
 
 TORRENT_EXPORT int torrent_set_settings(int tor, int tag, ...) {
+  clear_last_error();
+  try {
   using namespace lt;
   torrent_handle h = get_handle(tor);
   if (!h.is_valid())
+  {
+    set_last_error(-1, "invalid torrent handle");
     return -1;
+  }
 
   va_list lp;
   va_start(lp, tag);
@@ -709,14 +1122,29 @@ TORRENT_EXPORT int torrent_set_settings(int tor, int tag, ...) {
   }
   va_end(lp);
   return 0;
+  } catch (std::exception const &e) {
+    set_last_error(-1, e.what());
+    return -1;
+  } catch (...) {
+    set_last_error(-1, "unknown exception in torrent_set_settings");
+    return -1;
+  }
 }
 
 TORRENT_EXPORT int torrent_get_setting(int tor, int tag, void *value,
                                        int *value_size) {
+  clear_last_error();
   using namespace lt;
   torrent_handle h = get_handle(tor);
   if (!h.is_valid())
+  {
+    set_last_error(-1, "invalid torrent handle");
     return -1;
+  }
+  if (!value || !value_size) {
+    set_last_error(-1, "invalid get_setting arguments");
+    return -1;
+  }
 
   switch (tag) {
   case SET_UPLOAD_RATE_LIMIT:
@@ -739,5 +1167,62 @@ TORRENT_EXPORT int torrent_get_setting(int tor, int tag, void *value,
 TORRENT_EXPORT int torrent_set_int_setting(int tor, int tag, int value) {
   return torrent_set_settings(tor, tag, value, TAG_END);
 }
+
+TORRENT_EXPORT int torrent_set_settings_items(int tor
+  , lt_tag_item const *items, int const num_items) {
+  clear_last_error();
+  try {
+    using namespace lt;
+    torrent_handle h = get_handle(tor);
+    if (!h.is_valid() || !items || num_items <= 0) {
+      set_last_error(-1, "invalid torrent_set_settings_items arguments");
+      return -1;
+    }
+    for (int i = 0; i < num_items; ++i) {
+      lt_tag_item const &item = items[i];
+      switch (item.tag) {
+      case SET_UPLOAD_RATE_LIMIT:
+        h.set_upload_limit(item.int_value);
+        break;
+      case SET_DOWNLOAD_RATE_LIMIT:
+        h.set_download_limit(item.int_value);
+        break;
+      case SET_MAX_UPLOAD_SLOTS:
+        h.set_max_uploads(item.int_value);
+        break;
+      case SET_MAX_CONNECTIONS:
+        h.set_max_connections(item.int_value);
+        break;
+      case SET_SEQUENTIAL_DOWNLOAD:
+        h.set_sequential_download(item.int_value != 0);
+        break;
+      case SET_SUPER_SEEDING:
+        h.super_seeding(item.int_value != 0);
+        break;
+      default:
+        break;
+      }
+    }
+    return 0;
+  } catch (std::exception const &e) {
+    set_last_error(-1, e.what());
+    return -1;
+  } catch (...) {
+    set_last_error(-1, "unknown exception in torrent_set_settings_items");
+    return -1;
+  }
+}
+
+TORRENT_EXPORT int lt_last_error(struct lt_error *error, int struct_size) {
+  if (!error || struct_size != sizeof(lt_error))
+    return -1;
+  error->code = g_last_error_code;
+  std::strncpy(error->message, g_last_error_message.c_str(),
+               sizeof(error->message) - 1);
+  error->message[sizeof(error->message) - 1] = '\0';
+  return 0;
+}
+
+TORRENT_EXPORT void lt_clear_error(void) { clear_last_error(); }
 
 } // extern "C"

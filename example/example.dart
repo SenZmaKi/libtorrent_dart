@@ -1,4 +1,4 @@
-import 'package:libtorrent_dart/libtorrent_dart.dart';
+import 'package:libtorrent_dart/src/libtorrent_dart.dart';
 
 Future<void> main() async {
   final session = createSession();

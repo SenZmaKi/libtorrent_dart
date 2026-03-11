@@ -1,0 +1,79 @@
+name: Tests
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build-and-test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Setup Dart SDK
+        uses: dart-lang/setup-dart@v1
+
+      - name: Install Linux dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake ninja-build libboost-dev libssl-dev
+
+      - name: Install macOS dependencies
+        if: runner.os == 'macOS'
+        run: |
+          brew update
+          brew install cmake ninja boost openssl@3
+
+      - name: Install Windows dependencies
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          choco install -y cmake ninja boost-msvc-14.3 --no-progress
+
+      - name: Configure and build (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          cmake -G Ninja -S . -B cmake_build/linux \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DLTD_BOOST_HEADERS_ROOT=/usr/include
+          cmake --build cmake_build/linux --target libtorrent_dart -j4
+
+      - name: Configure and build (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          BOOST_ROOT=/opt/homebrew/include
+          if [ ! -f "$BOOST_ROOT/boost/version.hpp" ]; then
+            BOOST_ROOT=/usr/local/include
+          fi
+          cmake -G Ninja -S . -B cmake_build/macos \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DLTD_BOOST_HEADERS_ROOT="$BOOST_ROOT"
+          cmake --build cmake_build/macos --target libtorrent_dart -j4
+
+      - name: Configure and build (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $boostDir = Get-ChildItem 'C:\local' -Directory | Where-Object { $_.Name -like 'boost_*' } | Select-Object -First 1
+          if (-not $boostDir) { throw 'Boost headers not found under C:\local' }
+          cmake -G Ninja -S . -B cmake_build/windows -DCMAKE_BUILD_TYPE=Release -DLTD_BOOST_HEADERS_ROOT="$($boostDir.FullName)"
+          cmake --build cmake_build/windows --target libtorrent_dart -j4
+
+      - name: Pub get
+        run: dart pub get
+
+      - name: Analyze
+        run: dart analyze
+
+      - name: Test
+        run: dart test

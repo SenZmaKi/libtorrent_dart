@@ -1,0 +1,2 @@
+- Download binaries on build if not found
+- gh workflow for automated builds

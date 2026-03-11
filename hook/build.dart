@@ -17,9 +17,13 @@ void main(List<String> args) async {
         binaryUri = packageRoot.resolve(
           'binaries/macos/libtorrent-rasterbar.dylib',
         );
-      case OS.android || OS.linux:
+      case OS.android:
         binaryUri = packageRoot.resolve(
           'binaries/android/libtorrent-rasterbar.so',
+        );
+      case OS.linux:
+        binaryUri = packageRoot.resolve(
+          'binaries/linux/libtorrent-rasterbar.so',
         );
       case OS.windows:
         binaryUri = packageRoot.resolve(

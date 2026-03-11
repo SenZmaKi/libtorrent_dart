@@ -2,6 +2,12 @@ cmake_minimum_required(VERSION 3.20)
 
 project(libtorrent_dart LANGUAGES C CXX)
 
+set(LTD_DART_LIBRARY_TYPE SHARED)
+if(IOS)
+  # iOS consumers typically link static artifacts into the app binary.
+  set(LTD_DART_LIBRARY_TYPE STATIC)
+endif()
+
 # ──────────────────────────────────────────────────────────────────────────────
 # Options
 # ──────────────────────────────────────────────────────────────────────────────
@@ -47,7 +53,7 @@ add_subdirectory(thirdparty/libtorrent thirdparty/libtorrent-build)
 # libtorrent_dart shared library (the FFI wrapper)
 # ──────────────────────────────────────────────────────────────────────────────
 
-add_library(libtorrent_dart SHARED src/c/library.cpp)
+add_library(libtorrent_dart ${LTD_DART_LIBRARY_TYPE} src/c/library.cpp)
 
 target_include_directories(libtorrent_dart PRIVATE src/c)
 
@@ -67,12 +73,14 @@ set_target_properties(libtorrent_dart PROPERTIES
 # Per-platform output directories and post-build fixups
 # ──────────────────────────────────────────────────────────────────────────────
 
-if(APPLE)
+if(IOS)
+  set_target_properties(libtorrent_dart PROPERTIES
+    ARCHIVE_OUTPUT_DIRECTORY "${LTD_OUTPUT_DIR}/ios"
+  )
+elseif(APPLE)
   set_target_properties(libtorrent_dart PROPERTIES
     LIBRARY_OUTPUT_DIRECTORY "${LTD_OUTPUT_DIR}/macos"
   )
-  # libtorrent is linked statically into the wrapper (BUILD_SHARED_LIBS=OFF),
-  # so no second dylib needs to be copied or patched.
 elseif(ANDROID)
   set_target_properties(libtorrent_dart PROPERTIES
     LIBRARY_OUTPUT_DIRECTORY "${LTD_OUTPUT_DIR}/android"

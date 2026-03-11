@@ -1,47 +1,17 @@
 # Building libtorrent_dart
 
-This document covers building the native shared libraries from source. Pre-built
-binaries for macOS and Android (arm64-v8a) are checked in under `binaries/`.
+This guide covers building the native bridge for all supported targets.
 
 ## Prerequisites
 
-### All platforms
-
 - CMake 3.20+
-- Ninja build system (`brew install ninja` / `apt install ninja-build`)
-- Boost headers 1.80+ (headers only — no compiled Boost libraries needed)
-
-### macOS
-
-- Xcode Command Line Tools (`xcode-select --install`)
-- Homebrew packages:
-  ```
-  brew install cmake ninja boost openssl
-  ```
-- Tested with: AppleClang 17, Boost 1.90.0, OpenSSL 3.6.1
-
-### Android
-
-- Android NDK r25 or later (tested with NDK 27.0.12077973)
-  ```
-  brew install --cask android-ndk
-  # or download from https://developer.android.com/ndk/downloads
-  ```
-- Set `ANDROID_NDK_HOME` to the NDK root, e.g.:
-  ```
-  export ANDROID_NDK_HOME=/opt/homebrew/share/android-ndk
-  ```
-- Boost headers accessible from the host (same as macOS path above)
-- OpenSSL is **not** required for Android — the build will disable encryption
-  support automatically if not found
-
-## Initialise the submodule
-
-The libtorrent source is included as a git submodule with nested sub-submodules.
-Run this once after cloning:
+- Ninja (`brew install ninja` / `apt install ninja-build`)
+- Boost headers (1.80+)
+- Clone the repository with submodules:
 
 ```sh
-git -c protocol.file.allow=always submodule update --init --recursive thirdparty/libtorrent
+git clone --recursive https://github.com/SenZmaKi/libtorrent_dart.git
+cd libtorrent_dart
 ```
 
 ## macOS
@@ -50,24 +20,33 @@ git -c protocol.file.allow=always submodule update --init --recursive thirdparty
 cmake -G Ninja -S . -B cmake_build/macos \
   -DCMAKE_BUILD_TYPE=Release \
   -DLTD_BOOST_HEADERS_ROOT=/opt/homebrew/include
-
-cmake --build cmake_build/macos --target libtorrent_dart -j$(sysctl -n hw.logicalcpu)
+cmake --build cmake_build/macos --target libtorrent_dart -j8
 ```
 
-Output (placed in `binaries/macos/` automatically):
+Output: `binaries/macos/libtorrent-rasterbar.dylib`
 
-| File                             | Description                                            |
-| -------------------------------- | ------------------------------------------------------ |
-| `libtorrent-rasterbar.dylib`     | FFI wrapper — loaded by Dart                           |
-| `libtorrent-rasterbar.2.0.dylib` | libtorrent core — loaded at runtime via `@loader_path` |
+## Linux
 
-If Boost is installed somewhere other than `/opt/homebrew/include`, pass the
-correct path via `-DLTD_BOOST_HEADERS_ROOT=<path>`.
+```sh
+cmake -G Ninja -S . -B cmake_build/linux \
+  -DCMAKE_BUILD_TYPE=Release \
+  -DLTD_BOOST_HEADERS_ROOT=/usr/include
+cmake --build cmake_build/linux --target libtorrent_dart -j8
+```
 
-## Android (arm64-v8a)
+Output: `binaries/linux/libtorrent-rasterbar.so`
 
-The Android build links libtorrent **statically** into the wrapper, producing a
-single self-contained `.so` with no dependency on a second libtorrent `.so`.
+## Windows (MSVC)
+
+```powershell
+cmake -G "Ninja" -S . -B cmake_build/windows `
+  -DCMAKE_BUILD_TYPE=Release
+cmake --build cmake_build/windows --target libtorrent_dart -j8
+```
+
+Output: `binaries/windows/torrent-rasterbar.dll`
+
+## Android (NDK)
 
 ```sh
 cmake -G Ninja -S . -B cmake_build/android \
@@ -77,53 +56,28 @@ cmake -G Ninja -S . -B cmake_build/android \
   -DCMAKE_BUILD_TYPE=Release \
   -DLTD_BOOST_HEADERS_ROOT=/opt/homebrew/include \
   -DBUILD_SHARED_LIBS=OFF
-
-cmake --build cmake_build/android --target libtorrent_dart -j$(sysctl -n hw.logicalcpu)
+cmake --build cmake_build/android --target libtorrent_dart -j8
 ```
 
-Output: `binaries/android/libtorrent-rasterbar.so` (~87 MB unstripped; will be
-stripped automatically by the Android Gradle build pipeline for release APKs).
+Output: `binaries/android/libtorrent-rasterbar.so`
 
-To build for other ABIs, change `-DANDROID_ABI=` to one of:
-`armeabi-v7a`, `x86`, `x86_64`.
-
-## CMake options
-
-| Option                   | Default                 | Description                                                       |
-| ------------------------ | ----------------------- | ----------------------------------------------------------------- |
-| `LTD_BOOST_HEADERS_ROOT` | `/opt/homebrew/include` | Directory containing `boost/` headers                             |
-| `LTD_OUTPUT_DIR`         | `<repo>/binaries`       | Root directory for platform output subdirectories                 |
-| `BUILD_SHARED_LIBS`      | `ON`                    | Set to `OFF` to link libtorrent statically (required for Android) |
-
-## Running the Dart tests
-
-### Dart SDK requirement
-
-This package uses the **Native Assets** feature, which requires the **standalone
-Dart SDK** (3.11.0 or later). The Flutter-bundled `dart` binary on the `stable`
-channel blocks this feature; do not use it for development.
-
-Install the standalone SDK via Homebrew:
+## iOS
 
 ```sh
-brew install dart-sdk
+cmake -G Xcode -S . -B cmake_build/ios \
+  -DCMAKE_SYSTEM_NAME=iOS \
+  -DCMAKE_OSX_DEPLOYMENT_TARGET=13.0 \
+  -DCMAKE_OSX_ARCHITECTURES=arm64 \
+  -DLTD_BOOST_HEADERS_ROOT=/opt/homebrew/include \
+  -DCMAKE_BUILD_TYPE=Release
+cmake --build cmake_build/ios --config Release --target libtorrent_dart
 ```
 
-Verify the correct binary is on your PATH (`/opt/homebrew/bin/dart` from the
-`dart-sdk` formula, not Flutter's):
+Output: `binaries/ios/libtorrent-rasterbar.a`
+
+## Dart checks
 
 ```sh
-dart --version
-# Dart SDK version: 3.11.0 (stable) ...
-```
-
-### Running the tests
-
-After a successful macOS build and installing the standalone SDK:
-
-```sh
-dart pub get
+dart analyze
 dart test
 ```
-
-All 3 tests should pass in under 15 seconds.
