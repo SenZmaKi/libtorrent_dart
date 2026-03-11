@@ -252,9 +252,7 @@ jobs:
       - name: Create or update release
         env:
           GH_TOKEN: ${{ github.token }}
-          # Temporary hack: update the existing v1.1.2 release assets instead of
-          # creating branch/tag-specific releases while validating the pipeline.
-          TAG_NAME: v1.1.2
+          TAG_NAME: ${{ github.ref_name }}
         run: |
           if gh release view "$TAG_NAME" >/dev/null 2>&1; then
             gh release upload "$TAG_NAME" \
