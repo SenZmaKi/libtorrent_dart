@@ -38,7 +38,15 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          choco install -y cmake ninja boost-msvc-14.3 --no-progress
+          $ErrorActionPreference = 'Stop'
+          $boostDir = Get-ChildItem 'C:\local' -Directory -ErrorAction SilentlyContinue |
+            Where-Object { $_.Name -like 'boost_*' } |
+            Select-Object -First 1
+          if (-not $boostDir) {
+            choco install -y boost-msvc-14.3 --no-progress --limit-output --execution-timeout=1200
+          }
+          cmake --version
+          ninja --version
 
       - name: Configure and build (Linux)
         if: runner.os == 'Linux'
@@ -64,6 +72,7 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
+          $ErrorActionPreference = 'Stop'
           $boostDir = Get-ChildItem 'C:\local' -Directory | Where-Object { $_.Name -like 'boost_*' } | Select-Object -First 1
           if (-not $boostDir) { throw 'Boost headers not found under C:\local' }
           cmake -G Ninja -S . -B cmake_build/windows -DCMAKE_BUILD_TYPE=Release -DLTD_BOOST_HEADERS_ROOT="$($boostDir.FullName)"
