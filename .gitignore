@@ -1,9 +1,14 @@
 # libtorrent_dart
-binaries/android/
-binaries/macos/
-binaries/ios/
-binaries/linux/
-binaries/windows/
+binaries/android/*
+binaries/macos/*
+binaries/ios/*
+binaries/linux/*
+binaries/windows/*
+!binaries/android/.gitkeep
+!binaries/macos/.gitkeep
+!binaries/ios/.gitkeep
+!binaries/linux/.gitkeep
+!binaries/windows/.gitkeep
 
 # Dart
 .dart_tool/

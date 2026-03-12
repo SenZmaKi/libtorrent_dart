@@ -1,0 +1,1 @@
+- Once you completely finish task or answer a question prompt me using the question/prompt tool to review it and in the options for the prompt have good and other. Every time even after initially prompting me do it recursively.
