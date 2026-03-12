@@ -38,6 +38,13 @@ if(EXISTS "${LTD_BOOST_HEADERS_ROOT}/boost/version.hpp")
   # Keep Boost headers available even in cross-compiles (Android toolchain may
   # not pick host include paths unless explicitly injected).
   include_directories(BEFORE "${LTD_BOOST_HEADERS_ROOT}")
+  if(ANDROID)
+    # The NDK toolchain adds host paths (e.g. /usr/include) to
+    # CMAKE_CXX_IMPLICIT_INCLUDE_DIRECTORIES, causing CMake to silently strip
+    # them from include_directories() output.  Force Boost into the compile
+    # flags directly to bypass that deduplication.
+    add_compile_options("-isystem${LTD_BOOST_HEADERS_ROOT}")
+  endif()
 endif()
 
 # ──────────────────────────────────────────────────────────────────────────────
