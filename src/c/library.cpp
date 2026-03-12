@@ -50,7 +50,6 @@ POSSIBILITY OF SUCH DAMAGE.
 #include <string>
 #include <vector>
 
-
 // TORRENT_EXPORT is no longer needed on Windows: __declspec(dllexport) is
 // already present on the declarations in libtorrent.h (via LTD_API), so
 // putting it again on the definitions would cause MSVC C2375 "different
@@ -1019,21 +1018,19 @@ TORRENT_EXPORT int torrent_get_status(int tor, torrent_status *s,
   return 0;
 }
 
-TORRENT_EXPORT int torrent_pause(int tor) {
+TORRENT_EXPORT int torrent_pause(int tor, int graceful) {
   clear_last_error();
-  using namespace lt;
   lt::torrent_handle h = get_handle(tor);
   if (!h.is_valid()) {
     set_last_error(-1, "invalid torrent handle");
     return -1;
   }
-  h.pause();
+  h.pause(graceful ? lt::torrent_handle::graceful_pause : lt::pause_flags_t{});
   return 0;
 }
 
 TORRENT_EXPORT int torrent_resume(int tor) {
   clear_last_error();
-  using namespace lt;
   lt::torrent_handle h = get_handle(tor);
   if (!h.is_valid()) {
     set_last_error(-1, "invalid torrent handle");
@@ -1062,6 +1059,169 @@ TORRENT_EXPORT int torrent_cancel(void *ses, int tor, int delete_files) {
     flags |= lt::session::delete_files;
   s->remove_torrent(h, flags);
   return 0;
+}
+
+TORRENT_EXPORT long long torrent_get_flags(int tor) {
+  lt::torrent_handle h = get_handle(tor);
+  if (!h.is_valid())
+    return -1;
+  return static_cast<long long>(static_cast<std::uint64_t>(h.flags()));
+}
+
+TORRENT_EXPORT void torrent_set_flags(int tor, long long flags) {
+  lt::torrent_handle h = get_handle(tor);
+  if (h.is_valid())
+    h.set_flags(lt::torrent_flags_t{static_cast<std::uint64_t>(flags)});
+}
+
+TORRENT_EXPORT void torrent_unset_flags(int tor, long long flags) {
+  lt::torrent_handle h = get_handle(tor);
+  if (h.is_valid())
+    h.unset_flags(lt::torrent_flags_t{static_cast<std::uint64_t>(flags)});
+}
+
+TORRENT_EXPORT int torrent_force_recheck(int tor) {
+  clear_last_error();
+  lt::torrent_handle h = get_handle(tor);
+  if (!h.is_valid()) {
+    set_last_error(-1, "invalid torrent handle");
+    return -1;
+  }
+  h.force_recheck();
+  return 0;
+}
+
+TORRENT_EXPORT int torrent_force_reannounce(int tor, int seconds,
+                                            int tracker_idx) {
+  clear_last_error();
+  lt::torrent_handle h = get_handle(tor);
+  if (!h.is_valid()) {
+    set_last_error(-1, "invalid torrent handle");
+    return -1;
+  }
+  h.force_reannounce(seconds, tracker_idx);
+  return 0;
+}
+
+TORRENT_EXPORT int torrent_move_storage(int tor, const char *path, int flags) {
+  clear_last_error();
+  if (!path) {
+    set_last_error(-1, "invalid path");
+    return -1;
+  }
+  lt::torrent_handle h = get_handle(tor);
+  if (!h.is_valid()) {
+    set_last_error(-1, "invalid torrent handle");
+    return -1;
+  }
+  h.move_storage(path, flags);
+  return 0;
+}
+
+TORRENT_EXPORT int torrent_get_name(int tor, char *dest, int len) {
+  clear_last_error();
+  lt::torrent_handle h = get_handle(tor);
+  if (!h.is_valid()) {
+    set_last_error(-1, "invalid torrent handle");
+    return -1;
+  }
+  if (!dest || len <= 0) {
+    set_last_error(-1, "invalid arguments");
+    return -1;
+  }
+  lt::torrent_status ts = h.status(lt::torrent_handle::query_name);
+  strncpy(dest, ts.name.c_str(), len - 1);
+  dest[len - 1] = '\0';
+  return 0;
+}
+
+TORRENT_EXPORT int torrent_get_save_path(int tor, char *dest, int len) {
+  clear_last_error();
+  lt::torrent_handle h = get_handle(tor);
+  if (!h.is_valid()) {
+    set_last_error(-1, "invalid torrent handle");
+    return -1;
+  }
+  if (!dest || len <= 0) {
+    set_last_error(-1, "invalid arguments");
+    return -1;
+  }
+  lt::torrent_status ts = h.status(lt::torrent_handle::query_save_path);
+  strncpy(dest, ts.save_path.c_str(), len - 1);
+  dest[len - 1] = '\0';
+  return 0;
+}
+
+TORRENT_EXPORT int torrent_get_info_hash(int tor, char *dest, int len) {
+  clear_last_error();
+  lt::torrent_handle h = get_handle(tor);
+  if (!h.is_valid()) {
+    set_last_error(-1, "invalid torrent handle");
+    return -1;
+  }
+  if (!dest || len <= 0) {
+    set_last_error(-1, "invalid arguments");
+    return -1;
+  }
+  auto const &hashes = h.info_hashes();
+  unsigned char const *data;
+  int hash_len;
+  if (!hashes.v1.is_all_zeros()) {
+    data = reinterpret_cast<unsigned char const *>(hashes.v1.data());
+    hash_len = 20;
+  } else {
+    data = reinterpret_cast<unsigned char const *>(hashes.v2.data());
+    hash_len = 32;
+  }
+  int hex_len = hash_len * 2;
+  if (len < hex_len + 1) {
+    set_last_error(-1, "buffer too small");
+    return -1;
+  }
+  for (int i = 0; i < hash_len; ++i)
+    snprintf(dest + i * 2, 3, "%02x", static_cast<unsigned>(data[i]));
+  dest[hex_len] = '\0';
+  return 0;
+}
+
+TORRENT_EXPORT int torrent_queue_position(int tor) {
+  clear_last_error();
+  lt::torrent_handle h = get_handle(tor);
+  if (!h.is_valid()) {
+    set_last_error(-1, "invalid torrent handle");
+    return -1;
+  }
+  return static_cast<int>(h.queue_position());
+}
+
+TORRENT_EXPORT void torrent_queue_position_up(int tor) {
+  lt::torrent_handle h = get_handle(tor);
+  if (h.is_valid())
+    h.queue_position_up();
+}
+
+TORRENT_EXPORT void torrent_queue_position_down(int tor) {
+  lt::torrent_handle h = get_handle(tor);
+  if (h.is_valid())
+    h.queue_position_down();
+}
+
+TORRENT_EXPORT void torrent_queue_position_top(int tor) {
+  lt::torrent_handle h = get_handle(tor);
+  if (h.is_valid())
+    h.queue_position_top();
+}
+
+TORRENT_EXPORT void torrent_queue_position_bottom(int tor) {
+  lt::torrent_handle h = get_handle(tor);
+  if (h.is_valid())
+    h.queue_position_bottom();
+}
+
+TORRENT_EXPORT void torrent_queue_position_set(int tor, int pos) {
+  lt::torrent_handle h = get_handle(tor);
+  if (h.is_valid())
+    h.queue_position_set(lt::queue_position_t{pos});
 }
 
 TORRENT_EXPORT int torrent_set_progress_callback(int tor,

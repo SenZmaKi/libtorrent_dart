@@ -140,6 +140,32 @@ enum proxy_type_t {
 
 enum storage_mode_t { storage_mode_allocate = 0, storage_mode_sparse };
 
+/* torrent_flags_t bit values (matches lt::torrent_flags in torrent_flags.hpp)
+ */
+enum torrent_flag_bits {
+  LTD_FLAG_SEED_MODE = 1 << 0,
+  LTD_FLAG_UPLOAD_MODE = 1 << 1,
+  LTD_FLAG_SHARE_MODE = 1 << 2,
+  LTD_FLAG_APPLY_IP_FILTER = 1 << 3,
+  LTD_FLAG_PAUSED = 1 << 4,
+  LTD_FLAG_AUTO_MANAGED = 1 << 5,
+  LTD_FLAG_DUPLICATE_IS_ERROR = 1 << 6,
+  LTD_FLAG_UPDATE_SUBSCRIBE = 1 << 7,
+  LTD_FLAG_SUPER_SEEDING = 1 << 8,
+  LTD_FLAG_SEQUENTIAL_DOWNLOAD = 1 << 9,
+  LTD_FLAG_STOP_WHEN_READY = 1 << 10,
+  LTD_FLAG_OVERRIDE_TRACKERS = 1 << 11,
+  LTD_FLAG_OVERRIDE_WEB_SEEDS = 1 << 12,
+  LTD_FLAG_DISABLE_DHT = 1 << 19,
+  LTD_FLAG_DISABLE_LSD = 1 << 20,
+  LTD_FLAG_DISABLE_PEX = 1 << 21,
+  LTD_FLAG_NO_VERIFY_FILES = 1 << 22,
+  LTD_FLAG_DEFAULT_DONT_DOWNLOAD = 1 << 23
+};
+
+/* pause_flags_t bit values */
+enum pause_flag_bits { LTD_PAUSE_GRACEFUL = 1 << 0 };
+
 enum state_t {
   queued_for_checking,
   checking_files,
@@ -326,9 +352,24 @@ LTD_API int session_set_settings_items(void *ses,
 LTD_API int torrent_get_status(int tor, struct torrent_status *s,
                                int struct_size);
 
-LTD_API int torrent_pause(int tor);
+LTD_API int torrent_pause(int tor, int graceful);
 LTD_API int torrent_resume(int tor);
 LTD_API int torrent_cancel(void *ses, int tor, int delete_files);
+LTD_API long long torrent_get_flags(int tor);
+LTD_API void torrent_set_flags(int tor, long long flags);
+LTD_API void torrent_unset_flags(int tor, long long flags);
+LTD_API int torrent_force_recheck(int tor);
+LTD_API int torrent_force_reannounce(int tor, int seconds, int tracker_idx);
+LTD_API int torrent_move_storage(int tor, const char *path, int flags);
+LTD_API int torrent_get_name(int tor, char *dest, int len);
+LTD_API int torrent_get_save_path(int tor, char *dest, int len);
+LTD_API int torrent_get_info_hash(int tor, char *dest, int len);
+LTD_API int torrent_queue_position(int tor);
+LTD_API void torrent_queue_position_up(int tor);
+LTD_API void torrent_queue_position_down(int tor);
+LTD_API void torrent_queue_position_top(int tor);
+LTD_API void torrent_queue_position_bottom(int tor);
+LTD_API void torrent_queue_position_set(int tor, int pos);
 LTD_API int torrent_set_progress_callback(int tor, torrent_progress_callback cb,
                                           void *userdata);
 LTD_API int torrent_poll_progress(int tor);

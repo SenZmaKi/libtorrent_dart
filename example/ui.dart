@@ -75,7 +75,7 @@ String promptSavePath() {
 Future<void> runDownloadUI(DownloadSession dl) async {
   stdout.writeln('');
   stdout.writeln('Saving to: ${dl.savePath}');
-  stdout.writeln('Controls:  p = pause/resume   x = cancel & exit   q = quit');
+  stdout.writeln('Controls:  p = pause/resume   q = quit');
   stdout.writeln('');
 
   final done = Completer<void>();
@@ -102,7 +102,6 @@ Future<void> runDownloadUI(DownloadSession dl) async {
           dl.pause();
           stdout.writeln('\n⏸  Paused');
         }
-      case 'x':
       case 'q':
         stdout.writeln('\nCancelling...');
         keySub?.cancel();

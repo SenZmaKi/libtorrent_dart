@@ -109,8 +109,30 @@ class LibtorrentTagItem {
   }) => LibtorrentTagItem._(tag: tag, pointerValue: value, size: size);
 }
 
+class TorrentFlag {
+  TorrentFlag._();
+
+  static const int seedMode = 1 << 0;
+  static const int uploadMode = 1 << 1;
+  static const int shareMode = 1 << 2;
+  static const int applyIpFilter = 1 << 3;
+  static const int paused = 1 << 4;
+  static const int autoManaged = 1 << 5;
+  static const int duplicateIsError = 1 << 6;
+  static const int updateSubscribe = 1 << 7;
+  static const int superSeeding = 1 << 8;
+  static const int sequentialDownload = 1 << 9;
+  static const int stopWhenReady = 1 << 10;
+  static const int overrideTrackers = 1 << 11;
+  static const int overrideWebSeeds = 1 << 12;
+  static const int disableDht = 1 << 19;
+  static const int disableLsd = 1 << 20;
+  static const int disablePex = 1 << 21;
+  static const int noVerifyFiles = 1 << 22;
+  static const int defaultDontDownload = 1 << 23;
+}
+
 Session createSession() {
-  ffi.lt_clear_error();
   final handle = ffi.session_create_default();
   if (handle == nullptr) {
     _throwLastError('Failed to create session');
@@ -338,8 +360,8 @@ class TorrentHandle {
     );
   }
 
-  void pause() {
-    if (ffi.torrent_pause(id) != 0) {
+  void pause({bool graceful = false}) {
+    if (ffi.torrent_pause(id, graceful ? 1 : 0) != 0) {
       _throwLastError('Failed to pause torrent');
     }
   }
@@ -411,6 +433,77 @@ class TorrentHandle {
       calloc.free(size);
     }
   }
+
+  void forceRecheck() {
+    if (ffi.torrent_force_recheck(id) != 0) {
+      _throwLastError('Failed to force recheck');
+    }
+  }
+
+  void forceReannounce({int seconds = 0, int trackerIndex = -1}) {
+    if (ffi.torrent_force_reannounce(id, seconds, trackerIndex) != 0) {
+      _throwLastError('Failed to force reannounce');
+    }
+  }
+
+  void moveStorage(String path, {int flags = 0}) {
+    final pathPtr = path.toNativeUtf8(allocator: calloc);
+    try {
+      if (ffi.torrent_move_storage(id, pathPtr.cast<Char>(), flags) != 0) {
+        _throwLastError('Failed to move storage');
+      }
+    } finally {
+      calloc.free(pathPtr);
+    }
+  }
+
+  String name() {
+    final buf = calloc<Int8>(512);
+    try {
+      ffi.torrent_get_name(id, buf, 512);
+      return buf.cast<Utf8>().toDartString();
+    } finally {
+      calloc.free(buf);
+    }
+  }
+
+  String savePath() {
+    final buf = calloc<Int8>(4096);
+    try {
+      ffi.torrent_get_save_path(id, buf, 4096);
+      return buf.cast<Utf8>().toDartString();
+    } finally {
+      calloc.free(buf);
+    }
+  }
+
+  String infoHash() {
+    final buf = calloc<Int8>(65);
+    try {
+      ffi.torrent_get_info_hash(id, buf, 65);
+      return buf.cast<Utf8>().toDartString();
+    } finally {
+      calloc.free(buf);
+    }
+  }
+
+  int queuePosition() => ffi.torrent_queue_position(id);
+
+  void queuePositionSet(int pos) => ffi.torrent_queue_position_set(id, pos);
+
+  void queuePositionUp() => ffi.torrent_queue_position_up(id);
+
+  void queuePositionDown() => ffi.torrent_queue_position_down(id);
+
+  void queuePositionTop() => ffi.torrent_queue_position_top(id);
+
+  void queuePositionBottom() => ffi.torrent_queue_position_bottom(id);
+
+  int getFlags() => ffi.torrent_get_flags(id);
+
+  void setFlags(int flags) => ffi.torrent_set_flags(id, flags);
+
+  void unsetFlags(int flags) => ffi.torrent_unset_flags(id, flags);
 }
 
 class TorrentStatus {
@@ -423,6 +516,21 @@ class TorrentStatus {
     required this.state,
     required this.paused,
     required this.error,
+    required this.numSeeds,
+    required this.numPeers,
+    required this.numComplete,
+    required this.numIncomplete,
+    required this.listSeeds,
+    required this.listPeers,
+    required this.numConnections,
+    required this.numUploads,
+    required this.allTimeUpload,
+    required this.allTimeDownload,
+    required this.activeTime,
+    required this.seedingTime,
+    required this.currentTracker,
+    required this.seedMode,
+    required this.hasIncoming,
   });
 
   final double progress;
@@ -433,6 +541,21 @@ class TorrentStatus {
   final int state;
   final bool paused;
   final String error;
+  final int numSeeds;
+  final int numPeers;
+  final int numComplete;
+  final int numIncomplete;
+  final int listSeeds;
+  final int listPeers;
+  final int numConnections;
+  final int numUploads;
+  final int allTimeUpload;
+  final int allTimeDownload;
+  final int activeTime;
+  final int seedingTime;
+  final String currentTracker;
+  final bool seedMode;
+  final bool hasIncoming;
 }
 
 final Map<int, void Function(TorrentStatus)> _progressHandlers = {};
@@ -468,6 +591,21 @@ TorrentStatus _mapStatus(ffi.TorrentStatusNative status) {
     state: status.state,
     paused: status.paused != 0,
     error: ffi.int8ArrayToString(status.error, 1024),
+    numSeeds: status.num_seeds,
+    numPeers: status.num_peers,
+    numComplete: status.num_complete,
+    numIncomplete: status.num_incomplete,
+    listSeeds: status.list_seeds,
+    listPeers: status.list_peers,
+    numConnections: status.num_connections,
+    numUploads: status.num_uploads,
+    allTimeUpload: status.all_time_upload,
+    allTimeDownload: status.all_time_download,
+    activeTime: status.active_time,
+    seedingTime: status.seeding_time,
+    currentTracker: ffi.int8ArrayToString(status.current_tracker, 512),
+    seedMode: status.seed_mode != 0,
+    hasIncoming: status.has_incoming != 0,
   );
 }
 

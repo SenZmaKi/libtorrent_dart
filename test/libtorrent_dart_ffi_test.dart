@@ -69,7 +69,7 @@ void main() {
     ffi.torrent_poll_progress(tor);
     ffi.torrent_clear_progress_callback(tor);
 
-    expect(ffi.torrent_pause(tor), equals(0));
+    expect(ffi.torrent_pause(tor, 0), equals(0));
     expect(ffi.torrent_resume(tor), equals(0));
 
     final tst = calloc<ffi.TorrentStatusNative>();

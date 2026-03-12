@@ -87,8 +87,8 @@ external int session_set_settings_items(
   int numItems,
 );
 
-@Native<Int32 Function(Int32)>()
-external int torrent_pause(int torrentId);
+@Native<Int32 Function(Int32, Int32)>()
+external int torrent_pause(int torrentId, int graceful);
 
 @Native<Int32 Function(Int32)>()
 external int torrent_resume(int torrentId);
@@ -99,6 +99,55 @@ external int torrent_cancel(
   int torrentId,
   int deleteFiles,
 );
+
+@Native<Int64 Function(Int32)>()
+external int torrent_get_flags(int torrentId);
+
+@Native<Void Function(Int32, Int64)>()
+external void torrent_set_flags(int torrentId, int flags);
+
+@Native<Void Function(Int32, Int64)>()
+external void torrent_unset_flags(int torrentId, int flags);
+
+@Native<Int32 Function(Int32)>()
+external int torrent_force_recheck(int torrentId);
+
+@Native<Int32 Function(Int32, Int32, Int32)>()
+external int torrent_force_reannounce(
+  int torrentId,
+  int seconds,
+  int trackerIdx,
+);
+
+@Native<Int32 Function(Int32, Pointer<Char>, Int32)>()
+external int torrent_move_storage(int torrentId, Pointer<Char> path, int flags);
+
+@Native<Int32 Function(Int32, Pointer<Int8>, Int32)>()
+external int torrent_get_name(int torrentId, Pointer<Int8> dest, int len);
+
+@Native<Int32 Function(Int32, Pointer<Int8>, Int32)>()
+external int torrent_get_save_path(int torrentId, Pointer<Int8> dest, int len);
+
+@Native<Int32 Function(Int32, Pointer<Int8>, Int32)>()
+external int torrent_get_info_hash(int torrentId, Pointer<Int8> dest, int len);
+
+@Native<Int32 Function(Int32)>()
+external int torrent_queue_position(int torrentId);
+
+@Native<Void Function(Int32)>()
+external void torrent_queue_position_up(int torrentId);
+
+@Native<Void Function(Int32)>()
+external void torrent_queue_position_down(int torrentId);
+
+@Native<Void Function(Int32)>()
+external void torrent_queue_position_top(int torrentId);
+
+@Native<Void Function(Int32)>()
+external void torrent_queue_position_bottom(int torrentId);
+
+@Native<Void Function(Int32, Int32)>()
+external void torrent_queue_position_set(int torrentId, int pos);
 
 typedef ProgressCallbackC =
     Void Function(Int32, Pointer<TorrentStatusNative>, Pointer<Void>);
