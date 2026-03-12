@@ -99,15 +99,21 @@ jobs:
       - name: Configure and build (Android arm64)
         run: |
           test -f /usr/include/boost/version.hpp
+          # Copy Boost to an isolated path: the NDK toolchain adds /usr/include
+          # to CMAKE_CXX_IMPLICIT_INCLUDE_DIRECTORIES so CMake silently strips
+          # it from include_directories().  A non-system path is never filtered.
+          mkdir -p /tmp/boost-include
+          cp -r /usr/include/boost /tmp/boost-include/
+          BOOST_ROOT="/tmp/boost-include"
           VERSION="$(grep -E '^version:' pubspec.yaml | awk '{print $2}')"
           OPENSSL_ROOT="$PWD/thirdparty/openssl-android/arm64-v8a"
           cmake --preset android \
             -DLTD_BINARY_LAYOUT_VERSION="$VERSION" \
-            -DLTD_BOOST_HEADERS_ROOT="/usr/include" \
-            -DBoost_INCLUDE_DIR="/usr/include" \
-            -DBoost_INCLUDE_DIRS="/usr/include" \
-            -DBOOST_ROOT="/usr/include" \
-            -DBOOST_INCLUDEDIR="/usr/include" \
+            -DLTD_BOOST_HEADERS_ROOT="$BOOST_ROOT" \
+            -DBoost_INCLUDE_DIR="$BOOST_ROOT" \
+            -DBoost_INCLUDE_DIRS="$BOOST_ROOT" \
+            -DBOOST_ROOT="$BOOST_ROOT" \
+            -DBOOST_INCLUDEDIR="$BOOST_ROOT" \
             -DOPENSSL_ROOT_DIR="$OPENSSL_ROOT" \
             -DOPENSSL_CRYPTO_LIBRARY="$OPENSSL_ROOT/lib/libcrypto.a" \
             -DOPENSSL_SSL_LIBRARY="$OPENSSL_ROOT/lib/libssl.a" \
