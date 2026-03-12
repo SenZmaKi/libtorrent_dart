@@ -45,14 +45,18 @@ endif()
 # output dylib/so has no dependency on a Homebrew or distro OpenSSL path.
 # ──────────────────────────────────────────────────────────────────────────────
 
-if(NOT ANDROID AND NOT WIN32 AND NOT IOS)
+if(NOT ANDROID AND NOT IOS)
   set(OPENSSL_USE_STATIC_LIBS TRUE CACHE BOOL "" FORCE)
   # Provide Homebrew default; command-line -DOPENSSL_ROOT_DIR overrides this.
   # iOS passes CMAKE_DISABLE_FIND_PACKAGE_OpenSSL=ON via its CMake preset
   # so libtorrent falls back to its built-in crypto (no OpenSSL on iOS).
-  # Android uses a cross-compiled static OpenSSL passed via -DOPENSSL_ROOT_DIR.
+  # Android and Windows use cross-compiled/bundled static OpenSSL passed via
+  # -DOPENSSL_ROOT_DIR (and explicit -DOPENSSL_SSL_LIBRARY / CRYPTO_LIBRARY).
   if(APPLE AND NOT OPENSSL_ROOT_DIR)
     set(OPENSSL_ROOT_DIR "/opt/homebrew/opt/openssl@3")
+  endif()
+  if(WIN32 AND NOT OPENSSL_ROOT_DIR)
+    set(OPENSSL_ROOT_DIR "${CMAKE_CURRENT_LIST_DIR}/thirdparty/openssl-windows/x64")
   endif()
 endif()
 

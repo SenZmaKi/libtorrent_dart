@@ -29,6 +29,7 @@ Makefile
 
 # Cross-compiled third-party static libs (build output, not source)
 thirdparty/openssl-android/
+thirdparty/openssl-windows/
 
 # Compiled binaries (prebuilts are explicitly allowed in binaries/)
 *.o

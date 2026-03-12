@@ -91,6 +91,18 @@ runs:
           -DLTD_BINARY_LAYOUT_VERSION="$VERSION"
         cmake --build --preset macos --parallel
 
+    - name: Cache Windows OpenSSL static libs
+      if: runner.os == 'Windows'
+      uses: actions/cache@v4
+      with:
+        path: thirdparty/openssl-windows
+        key: Windows-openssl-3.4.1-mt
+
+    - name: Build static OpenSSL for Windows
+      if: runner.os == 'Windows'
+      shell: pwsh
+      run: .\scripts\build_openssl_windows.ps1
+
     - name: Configure and build (Windows)
       if: runner.os == 'Windows'
       shell: pwsh
@@ -99,7 +111,14 @@ runs:
         $boostDir = Get-ChildItem 'C:\local' -Directory | Where-Object { $_.Name -like 'boost_*' } | Select-Object -First 1
         if (-not $boostDir) { throw 'Boost headers not found under C:\local' }
         $version = (Select-String -Path pubspec.yaml -Pattern '^version:\s*(.+)$').Matches[0].Groups[1].Value.Trim()
-        cmake --preset windows -DLTD_BOOST_HEADERS_ROOT="$($boostDir.FullName)" -DLTD_BINARY_LAYOUT_VERSION="$version"
+        $OPENSSL_ROOT = "$(Get-Location)\thirdparty\openssl-windows\x64"
+        cmake --preset windows `
+          -DLTD_BOOST_HEADERS_ROOT="$($boostDir.FullName)" `
+          -DLTD_BINARY_LAYOUT_VERSION="$version" `
+          -DOPENSSL_ROOT_DIR="$OPENSSL_ROOT" `
+          -DOPENSSL_SSL_LIBRARY="$OPENSSL_ROOT\lib\libssl.lib" `
+          -DOPENSSL_CRYPTO_LIBRARY="$OPENSSL_ROOT\lib\libcrypto.lib" `
+          -DOPENSSL_INCLUDE_DIR="$OPENSSL_ROOT\include"
         cmake --build --preset windows --parallel
 
     - name: Pub get
