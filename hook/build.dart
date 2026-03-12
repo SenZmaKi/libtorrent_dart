@@ -18,27 +18,38 @@ void main(List<String> args) async {
     // Map from target OS to the pre-built binary path inside the package.
     final Uri binaryUri;
     final String releaseAssetName;
+    final LinkMode linkMode;
     switch (os) {
       case OS.macOS:
         binaryUri = packageRoot.resolve(
           'binaries/macos/$packageVersion/libtorrent-rasterbar.dylib',
         );
         releaseAssetName = 'macos-libtorrent-rasterbar.dylib';
+        linkMode = DynamicLoadingBundled();
       case OS.android:
         binaryUri = packageRoot.resolve(
           'binaries/android/$packageVersion/libtorrent-rasterbar.so',
         );
         releaseAssetName = 'android-libtorrent-rasterbar.so';
+        linkMode = DynamicLoadingBundled();
       case OS.linux:
         binaryUri = packageRoot.resolve(
           'binaries/linux/$packageVersion/libtorrent-rasterbar.so',
         );
         releaseAssetName = 'linux-libtorrent-rasterbar.so';
+        linkMode = DynamicLoadingBundled();
       case OS.windows:
         binaryUri = packageRoot.resolve(
           'binaries/windows/$packageVersion/torrent-rasterbar.dll',
         );
         releaseAssetName = 'windows-torrent-rasterbar.dll';
+        linkMode = DynamicLoadingBundled();
+      case OS.iOS:
+        binaryUri = packageRoot.resolve(
+          'binaries/ios/$packageVersion/libtorrent-rasterbar.a',
+        );
+        releaseAssetName = 'ios-libtorrent-rasterbar.a';
+        linkMode = StaticLinking();
       default:
         throw UnsupportedError('Unsupported target OS: ${os.name}');
     }
@@ -61,7 +72,7 @@ void main(List<String> args) async {
         // This name must match the asset ID used in @DefaultAsset:
         //   package:libtorrent_dart/src/libtorrent_dart.dart
         name: 'src/libtorrent_dart.dart',
-        linkMode: DynamicLoadingBundled(),
+        linkMode: linkMode,
         file: binaryUri,
       ),
     );

@@ -17,6 +17,7 @@ pubspec.lock
 build/
 
 # CMake / C++ build artifacts
+CMakeUserPresets.json
 cmake_build/
 cmake-build-*/
 CMakeCache.txt
@@ -25,6 +26,9 @@ Makefile
 *.make
 *.cmake
 !CMakeLists.txt
+
+# Cross-compiled third-party static libs (build output, not source)
+thirdparty/openssl-android/
 
 # Compiled binaries (prebuilts are explicitly allowed in binaries/)
 *.o
@@ -40,6 +44,7 @@ Makefile
 !binaries/**/*.so
 !binaries/**/*.dll
 !binaries/**/*.exe
+!binaries/**/*.a
 
 # macOS
 .DS_Store

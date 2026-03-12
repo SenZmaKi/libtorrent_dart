@@ -45,12 +45,30 @@ endif()
 # output dylib/so has no dependency on a Homebrew or distro OpenSSL path.
 # ──────────────────────────────────────────────────────────────────────────────
 
-if(NOT ANDROID AND NOT WIN32)
+if(NOT ANDROID AND NOT WIN32 AND NOT IOS)
   set(OPENSSL_USE_STATIC_LIBS TRUE CACHE BOOL "" FORCE)
-  # Help CMake find the Homebrew static libs on macOS
-  if(APPLE)
-    set(OPENSSL_ROOT_DIR "/opt/homebrew/opt/openssl@3" CACHE PATH "" FORCE)
+  # Provide Homebrew default; command-line -DOPENSSL_ROOT_DIR overrides this.
+  # iOS passes CMAKE_DISABLE_FIND_PACKAGE_OpenSSL=ON via its CMake preset
+  # so libtorrent falls back to its built-in crypto (no OpenSSL on iOS).
+  # Android uses a cross-compiled static OpenSSL passed via -DOPENSSL_ROOT_DIR.
+  if(APPLE AND NOT OPENSSL_ROOT_DIR)
+    set(OPENSSL_ROOT_DIR "/opt/homebrew/opt/openssl@3")
   endif()
+endif()
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Symbol visibility (non-Windows): hide all internal symbols so only the
+# explicitly-annotated C API is exported.  This shrinks the export table,
+# prevents ODR conflicts when libtorrent is bundled in multiple .so/.dylib
+# files, and reduces binary size on Android.
+# ──────────────────────────────────────────────────────────────────────────────
+if(NOT WIN32)
+  add_compile_options(-fvisibility=hidden -fvisibility-inlines-hidden)
+endif()
+if(ANDROID)
+  # Dead-code elimination: split each function/variable into its own section
+  # so the linker can discard unreachable ones.
+  add_compile_options(-ffunction-sections -fdata-sections)
 endif()
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -76,25 +94,14 @@ add_library(libtorrent_dart ${LTD_DART_LIBRARY_TYPE} src/c/library.cpp)
 # Windows Portability Fix: Static Linking
 # ──────────────────────────────────────────────────────────────────────────────
 if(WIN32)
-  if(MINGW)
-    # Force static linking for MinGW-specific libraries (libgcc, libstdc++, pthreads)
-    target_link_options(libtorrent_dart PRIVATE 
-        "-static-libgcc" 
-        "-static-libstdc++" 
-        "-Wl,-Bstatic" 
-        "-lstdc++" 
-        "-lpthread" 
-        "-Wl,-Bdynamic"
-    )
-  else()
-    # If using MSVC, link the C/C++ Runtime (MT) statically so users don't need 
-    # the "Visual C++ Redistributable" installed.
-    set_property(TARGET libtorrent_dart PROPERTY
-      MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>"
+  if(NOT MSVC)
+    message(FATAL_ERROR
+      "Only MSVC (cl.exe) is supported on Windows.\n"
+      "Open a VS x64 Developer Command Prompt or use the 'windows' CMake preset."
     )
   endif()
-  
-  # Ensure core Windows networking and crypto libs are linked
+
+  # Core Windows networking and crypto libs
   target_link_libraries(libtorrent_dart PRIVATE iphlpapi ws2_32 bcrypt)
 endif()
 target_include_directories(libtorrent_dart PRIVATE src/c)
@@ -135,11 +142,34 @@ elseif(ANDROID)
 elseif(WIN32)
   set_target_properties(libtorrent_dart PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY "${LTD_OUTPUT_DIR}/windows${_ltd_version_suffix}"
+    ARCHIVE_OUTPUT_DIRECTORY "${LTD_OUTPUT_DIR}/windows${_ltd_version_suffix}"
     OUTPUT_NAME torrent-rasterbar
   )
 else()
   # Linux / other POSIX
   set_target_properties(libtorrent_dart PROPERTIES
     LIBRARY_OUTPUT_DIRECTORY "${LTD_OUTPUT_DIR}/linux${_ltd_version_suffix}"
+  )
+endif()
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Release binary size: strip debug info and dead code from the linked output.
+# These flags only activate for Release builds via generator expressions.
+# ──────────────────────────────────────────────────────────────────────────────
+if(ANDROID)
+  target_link_options(libtorrent_dart PRIVATE
+    $<$<CONFIG:Release>:-Wl,--gc-sections>
+    $<$<CONFIG:Release>:-Wl,--strip-debug>
+    # Prevent symbols from statically-linked archives (libtorrent, libc++_static,
+    # libssl, etc.) from leaking into the .so dynamic symbol table.
+    -Wl,--exclude-libs,ALL
+  )
+elseif(UNIX AND NOT APPLE)
+  target_link_options(libtorrent_dart PRIVATE
+    $<$<CONFIG:Release>:-Wl,--strip-debug>
+  )
+elseif(APPLE AND NOT IOS)
+  target_link_options(libtorrent_dart PRIVATE
+    $<$<CONFIG:Release>:-Wl,-S>
   )
 endif()

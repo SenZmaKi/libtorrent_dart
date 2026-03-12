@@ -1,0 +1,106 @@
+{
+  "version": 6,
+  "configurePresets": [
+    {
+      "name": "base",
+      "hidden": true,
+      "binaryDir": "${sourceDir}/cmake_build/${presetName}",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release"
+      }
+    },
+    {
+      "name": "linux",
+      "displayName": "Linux – GCC/Clang Release",
+      "inherits": "base",
+      "generator": "Ninja",
+      "cacheVariables": {
+        "CMAKE_C_COMPILER_LAUNCHER": "ccache",
+        "CMAKE_CXX_COMPILER_LAUNCHER": "ccache",
+        "LTD_BOOST_HEADERS_ROOT": "/usr/include"
+      }
+    },
+    {
+      "name": "macos",
+      "displayName": "macOS – Clang Release",
+      "inherits": "base",
+      "generator": "Ninja",
+      "cacheVariables": {
+        "CMAKE_C_COMPILER_LAUNCHER": "ccache",
+        "CMAKE_CXX_COMPILER_LAUNCHER": "ccache",
+        "LTD_BOOST_HEADERS_ROOT": "/opt/homebrew/include"
+      }
+    },
+    {
+      "name": "windows",
+      "displayName": "Windows – MSVC x64 Release",
+      "inherits": "base",
+      "generator": "Ninja",
+      "cacheVariables": {
+        "CMAKE_C_COMPILER": "cl",
+        "CMAKE_CXX_COMPILER": "cl",
+        "CMAKE_C_COMPILER_LAUNCHER": "ccache",
+        "CMAKE_CXX_COMPILER_LAUNCHER": "ccache",
+        "CMAKE_MSVC_RUNTIME_LIBRARY": "MultiThreaded$<$<CONFIG:Debug>:Debug>"
+      }
+    },
+    {
+      "name": "android",
+      "displayName": "Android arm64-v8a Release",
+      "inherits": "base",
+      "generator": "Ninja",
+      "cacheVariables": {
+        "CMAKE_TOOLCHAIN_FILE": "$env{ANDROID_NDK_HOME}/build/cmake/android.toolchain.cmake",
+        "ANDROID_ABI": "arm64-v8a",
+        "ANDROID_PLATFORM": "android-24",
+        "ANDROID_STL": "c++_static",
+        "CMAKE_C_COMPILER_LAUNCHER": "ccache",
+        "CMAKE_CXX_COMPILER_LAUNCHER": "ccache",
+        "HAVE_CXX_ATOMICS_WITHOUT_LIB": "ON",
+        "HAVE_CXX_ATOMICS8_WITHOUT_LIB": "ON",
+        "HAVE_CXX_ATOMICS64_WITHOUT_LIB": "ON"
+      }
+    },
+    {
+      "name": "ios",
+      "displayName": "iOS arm64 Release",
+      "inherits": "base",
+      "generator": "Xcode",
+      "cacheVariables": {
+        "CMAKE_SYSTEM_NAME": "iOS",
+        "CMAKE_OSX_DEPLOYMENT_TARGET": "13.0",
+        "CMAKE_OSX_ARCHITECTURES": "arm64",
+        "CMAKE_DISABLE_FIND_PACKAGE_OpenSSL": "ON",
+        "LTD_BOOST_HEADERS_ROOT": "/opt/homebrew/include"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "linux",
+      "configurePreset": "linux",
+      "targets": ["libtorrent_dart"]
+    },
+    {
+      "name": "macos",
+      "configurePreset": "macos",
+      "targets": ["libtorrent_dart"]
+    },
+    {
+      "name": "windows",
+      "configurePreset": "windows",
+      "targets": ["libtorrent_dart"]
+    },
+    {
+      "name": "android",
+      "configurePreset": "android",
+      "targets": ["libtorrent_dart"]
+    },
+    {
+      "name": "ios",
+      "configurePreset": "ios",
+      "targets": ["libtorrent_dart"],
+      "configuration": "Release"
+    }
+  ]
+}

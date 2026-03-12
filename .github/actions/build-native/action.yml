@@ -1,0 +1,115 @@
+name: "Build and Test Native"
+description: "Sets up Dart, installs platform deps, builds with CMake+ccache, and runs Dart tests"
+
+runs:
+  using: composite
+  steps:
+    - name: Setup Dart SDK
+      uses: dart-lang/setup-dart@v1
+
+    - name: Cache Dart packages
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.pub-cache
+          .dart_tool
+        key: ${{ runner.os }}-dart-${{ hashFiles('pubspec.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-dart-
+
+    - name: Install Linux dependencies
+      if: runner.os == 'Linux'
+      shell: bash
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y cmake ninja-build ccache libboost-dev libssl-dev
+
+    - name: Install macOS dependencies
+      if: runner.os == 'macOS'
+      shell: bash
+      run: |
+        brew update
+        brew install cmake ninja ccache boost openssl@3
+
+    - name: Install Windows dependencies
+      if: runner.os == 'Windows'
+      shell: pwsh
+      run: |
+        $ErrorActionPreference = 'Stop'
+        $boostDir = Get-ChildItem 'C:\local' -Directory -ErrorAction SilentlyContinue |
+          Where-Object { $_.Name -like 'boost_*' } |
+          Select-Object -First 1
+        if (-not $boostDir) {
+          choco install -y boost-msvc-14.3 --no-progress --limit-output --execution-timeout=1200
+        }
+        choco install ccache -y --no-progress
+        cmake --version
+        ninja --version
+
+    - name: Set up MSVC developer environment
+      if: runner.os == 'Windows'
+      uses: ilammy/msvc-dev-cmd@v1
+      with:
+        arch: amd64
+
+    - name: ccache Storage (Linux/macOS)
+      if: runner.os != 'Windows'
+      uses: actions/cache@v4
+      with:
+        path: ~/.cache/ccache
+        key: ${{ runner.os }}-ccache-${{ github.sha }}
+        restore-keys: |
+          ${{ runner.os }}-ccache-
+
+    - name: ccache Storage (Windows)
+      if: runner.os == 'Windows'
+      uses: actions/cache@v4
+      with:
+        path: ~\AppData\Local\ccache
+        key: ${{ runner.os }}-ccache-${{ github.sha }}
+        restore-keys: |
+          ${{ runner.os }}-ccache-
+
+    - name: Configure and build (Linux)
+      if: runner.os == 'Linux'
+      shell: bash
+      run: |
+        VERSION="$(grep -E '^version:' pubspec.yaml | awk '{print $2}')"
+        cmake --preset linux -DLTD_BINARY_LAYOUT_VERSION="$VERSION"
+        cmake --build --preset linux --parallel
+
+    - name: Configure and build (macOS)
+      if: runner.os == 'macOS'
+      shell: bash
+      run: |
+        VERSION="$(grep -E '^version:' pubspec.yaml | awk '{print $2}')"
+        BOOST_INC="$(brew --prefix boost)/include"
+        OPENSSL_ROOT="$(brew --prefix openssl@3)"
+        cmake --preset macos \
+          -DLTD_BOOST_HEADERS_ROOT="$BOOST_INC" \
+          -DOPENSSL_ROOT_DIR="$OPENSSL_ROOT" \
+          -DLTD_BINARY_LAYOUT_VERSION="$VERSION"
+        cmake --build --preset macos --parallel
+
+    - name: Configure and build (Windows)
+      if: runner.os == 'Windows'
+      shell: pwsh
+      run: |
+        $ErrorActionPreference = 'Stop'
+        $boostDir = Get-ChildItem 'C:\local' -Directory | Where-Object { $_.Name -like 'boost_*' } | Select-Object -First 1
+        if (-not $boostDir) { throw 'Boost headers not found under C:\local' }
+        $version = (Select-String -Path pubspec.yaml -Pattern '^version:\s*(.+)$').Matches[0].Groups[1].Value.Trim()
+        cmake --preset windows -DLTD_BOOST_HEADERS_ROOT="$($boostDir.FullName)" -DLTD_BINARY_LAYOUT_VERSION="$version"
+        cmake --build --preset windows --parallel
+
+    - name: Pub get
+      shell: bash
+      run: dart pub get
+
+    - name: Analyze
+      shell: bash
+      run: dart analyze
+
+    - name: Test
+      shell: bash
+      run: dart test

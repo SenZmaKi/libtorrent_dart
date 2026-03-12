@@ -33,6 +33,18 @@ POSSIBILITY OF SUCH DAMAGE.
 #ifndef LIBTORRENT_H
 #define LIBTORRENT_H
 
+#if defined(_WIN32)
+#if defined(libtorrent_dart_EXPORTS)
+#define LTD_API __declspec(dllexport)
+#else
+#define LTD_API __declspec(dllimport)
+#endif
+#elif defined(__GNUC__) || defined(__clang__)
+#define LTD_API __attribute__((visibility("default")))
+#else
+#define LTD_API
+#endif
+
 enum tags {
   TAG_END = 0,
 
@@ -274,56 +286,64 @@ extern "C" {
 // terminated by TAG_END.
 
 // use SES_* tags in tag list
-void *session_create(int first_tag, ...);
-void session_close(void *ses);
+LTD_API void *session_create(int first_tag, ...);
+LTD_API void session_close(void *ses);
 
 // fixed-signature helpers for FFI
-void *session_create_default(void);
-void *session_create_items(struct lt_tag_item const *items, int num_items);
-int session_add_magnet(void *ses, char const *magnet_uri, char const *save_path,
-                       int download_rate_limit, int upload_rate_limit);
+LTD_API void *session_create_default(void);
+LTD_API void *session_create_items(struct lt_tag_item const *items,
+                                   int num_items);
+LTD_API int session_add_magnet(void *ses, char const *magnet_uri,
+                               char const *save_path, int download_rate_limit,
+                               int upload_rate_limit);
 
 // use TOR_* tags in tag list
-int session_add_torrent(void *ses, int first_tag, ...);
-void session_remove_torrent(void *ses, int tor, int flags);
+LTD_API int session_add_torrent(void *ses, int first_tag, ...);
+LTD_API void session_remove_torrent(void *ses, int tor, int flags);
 
 // return < 0 if there are no alerts. Otherwise returns the
 // type of alert that was returned
-int session_pop_alert(void *ses, char *dest, int len, int *category);
+LTD_API int session_pop_alert(void *ses, char *dest, int len, int *category);
 
-int session_get_status(void *ses, struct session_status *s, int struct_size);
-
-// use SET_* tags in tag list
-int session_set_settings(void *ses, int first_tag, ...);
-int session_get_setting(void *ses, int tag, void *value, int *value_size);
-int session_set_int_setting(void *ses, int tag_type, int tag, int value);
-int session_set_string_setting(void *ses, int tag_type, int tag,
-                               char const *value);
-int session_add_torrent_items(void *ses, struct lt_tag_item const *items,
-                              int num_items);
-int session_set_settings_items(void *ses, struct lt_tag_item const *items,
-                               int num_items);
-
-int torrent_get_status(int tor, struct torrent_status *s, int struct_size);
-
-int torrent_pause(int tor);
-int torrent_resume(int tor);
-int torrent_cancel(void *ses, int tor, int delete_files);
-int torrent_set_progress_callback(int tor, torrent_progress_callback cb,
-                                  void *userdata);
-int torrent_poll_progress(int tor);
-void torrent_clear_progress_callback(int tor);
+LTD_API int session_get_status(void *ses, struct session_status *s,
+                               int struct_size);
 
 // use SET_* tags in tag list
-int torrent_set_settings(int tor, int first_tag, ...);
-int torrent_get_setting(int tor, int tag, void *value, int *value_size);
-int torrent_set_int_setting(int tor, int tag, int value);
-int torrent_set_settings_items(int tor, struct lt_tag_item const *items,
-                               int num_items);
+LTD_API int session_set_settings(void *ses, int first_tag, ...);
+LTD_API int session_get_setting(void *ses, int tag, void *value,
+                                int *value_size);
+LTD_API int session_set_int_setting(void *ses, int tag_type, int tag,
+                                    int value);
+LTD_API int session_set_string_setting(void *ses, int tag_type, int tag,
+                                       char const *value);
+LTD_API int session_add_torrent_items(void *ses,
+                                      struct lt_tag_item const *items,
+                                      int num_items);
+LTD_API int session_set_settings_items(void *ses,
+                                       struct lt_tag_item const *items,
+                                       int num_items);
+
+LTD_API int torrent_get_status(int tor, struct torrent_status *s,
+                               int struct_size);
+
+LTD_API int torrent_pause(int tor);
+LTD_API int torrent_resume(int tor);
+LTD_API int torrent_cancel(void *ses, int tor, int delete_files);
+LTD_API int torrent_set_progress_callback(int tor, torrent_progress_callback cb,
+                                          void *userdata);
+LTD_API int torrent_poll_progress(int tor);
+LTD_API void torrent_clear_progress_callback(int tor);
+
+// use SET_* tags in tag list
+LTD_API int torrent_set_settings(int tor, int first_tag, ...);
+LTD_API int torrent_get_setting(int tor, int tag, void *value, int *value_size);
+LTD_API int torrent_set_int_setting(int tor, int tag, int value);
+LTD_API int torrent_set_settings_items(int tor, struct lt_tag_item const *items,
+                                       int num_items);
 
 // error reporting helpers for FFI layers
-int lt_last_error(struct lt_error *error, int struct_size);
-void lt_clear_error(void);
+LTD_API int lt_last_error(struct lt_error *error, int struct_size);
+LTD_API void lt_clear_error(void);
 
 #ifdef __cplusplus
 }

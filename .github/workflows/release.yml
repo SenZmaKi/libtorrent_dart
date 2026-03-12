@@ -7,128 +7,49 @@ on:
   workflow_dispatch:
 
 jobs:
-  build-and-test:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
-
+  build-linux:
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           submodules: recursive
 
-      - name: Setup Dart SDK
-        uses: dart-lang/setup-dart@v1
-
-      - name: Cache Dart packages
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.pub-cache
-            .dart_tool
-          key: ${{ runner.os }}-dart-${{ hashFiles('pubspec.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-dart-
-
-      - name: Cache CMake build dirs
-        uses: actions/cache@v4
-        with:
-          path: |
-            cmake_build
-            thirdparty/libtorrent-build
-          key: ${{ runner.os }}-cmake-${{ hashFiles('CMakeLists.txt', 'src/c/**', 'thirdparty/libtorrent/CMakeLists.txt', 'thirdparty/libtorrent/include/**', 'thirdparty/libtorrent/src/**') }}
-          restore-keys: |
-            ${{ runner.os }}-cmake-
-
-      - name: Install Linux dependencies
-        if: runner.os == 'Linux'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y cmake ninja-build libboost-dev libssl-dev
-
-      - name: Install macOS dependencies
-        if: runner.os == 'macOS'
-        run: |
-          brew update
-          brew install cmake ninja boost openssl@3
-
-      - name: Install Windows dependencies
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          $ErrorActionPreference = 'Stop'
-          $boostDir = Get-ChildItem 'C:\local' -Directory -ErrorAction SilentlyContinue |
-            Where-Object { $_.Name -like 'boost_*' } |
-            Select-Object -First 1
-          if (-not $boostDir) {
-            choco install -y boost-msvc-14.3 --no-progress --limit-output --execution-timeout=1200
-          }
-          cmake --version
-          ninja --version
-
-      - name: Configure and build (Linux)
-        if: runner.os == 'Linux'
-        run: |
-          VERSION="$(grep -E '^version:' pubspec.yaml | awk '{print $2}')"
-          cmake -G Ninja -S . -B cmake_build/linux \
-            -DCMAKE_BUILD_TYPE=Release \
-            -DLTD_BOOST_HEADERS_ROOT=/usr/include \
-            -DLTD_BINARY_LAYOUT_VERSION="$VERSION"
-          cmake --build cmake_build/linux --target libtorrent_dart -j4
-
-      - name: Configure and build (macOS)
-        if: runner.os == 'macOS'
-        run: |
-          VERSION="$(grep -E '^version:' pubspec.yaml | awk '{print $2}')"
-          BOOST_ROOT=/opt/homebrew/include
-          if [ ! -f "$BOOST_ROOT/boost/version.hpp" ]; then
-            BOOST_ROOT=/usr/local/include
-          fi
-          cmake -G Ninja -S . -B cmake_build/macos \
-            -DCMAKE_BUILD_TYPE=Release \
-            -DLTD_BOOST_HEADERS_ROOT="$BOOST_ROOT" \
-            -DLTD_BINARY_LAYOUT_VERSION="$VERSION"
-          cmake --build cmake_build/macos --target libtorrent_dart -j4
-
-      - name: Configure and build (Windows)
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          $ErrorActionPreference = 'Stop'
-          $boostDir = Get-ChildItem 'C:\local' -Directory | Where-Object { $_.Name -like 'boost_*' } | Select-Object -First 1
-          if (-not $boostDir) { throw 'Boost headers not found under C:\local' }
-          $version = (Select-String -Path pubspec.yaml -Pattern '^version:\s*(.+)$').Matches[0].Groups[1].Value.Trim()
-          cmake -G Ninja -S . -B cmake_build/windows -DCMAKE_BUILD_TYPE=Release -DLTD_BOOST_HEADERS_ROOT="$($boostDir.FullName)" -DLTD_BINARY_LAYOUT_VERSION="$version"
-          cmake --build cmake_build/windows --target libtorrent_dart -j4
-
-      - name: Pub get
-        run: dart pub get
-
-      - name: Analyze
-        run: dart analyze
-
-      - name: Test
-        run: dart test
+      - uses: ./.github/actions/build-native
 
       - name: Upload release binary
-        if: runner.os == 'Linux'
         uses: actions/upload-artifact@v4
         with:
           name: linux-binary
           path: binaries/linux/*/libtorrent-rasterbar.so
 
+  build-macos:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - uses: ./.github/actions/build-native
+
       - name: Upload release binary
-        if: runner.os == 'macOS'
         uses: actions/upload-artifact@v4
         with:
           name: macos-binary
           path: binaries/macos/*/libtorrent-rasterbar.dylib
 
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - uses: ./.github/actions/build-native
+
       - name: Upload release binary
-        if: runner.os == 'Windows'
         uses: actions/upload-artifact@v4
         with:
           name: windows-binary
@@ -154,29 +75,44 @@ jobs:
       - name: Install build dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y cmake ninja-build libboost-dev
-          mkdir -p "$RUNNER_TEMP/boost-headers"
-          cp -R /usr/include/boost "$RUNNER_TEMP/boost-headers/"
+          sudo apt-get install -y cmake ninja-build ccache libboost-dev
+
+      - name: Cache static OpenSSL (Android arm64)
+        id: openssl-cache
+        uses: actions/cache@v4
+        with:
+          path: thirdparty/openssl-android
+          key: android-openssl-3.4.1-ndk26-arm64
+
+      - name: Build static OpenSSL for Android arm64
+        if: steps.openssl-cache.outputs.cache-hit != 'true'
+        run: bash scripts/build_openssl_android.sh
+
+      - name: ccache Storage
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ccache
+          key: Android-ccache-${{ github.sha }}
+          restore-keys: |
+            Android-ccache-
 
       - name: Configure and build (Android arm64)
         run: |
+          test -f /usr/include/boost/version.hpp
           VERSION="$(grep -E '^version:' pubspec.yaml | awk '{print $2}')"
-          test -f "$RUNNER_TEMP/boost-headers/boost/version.hpp"
-          cmake -G Ninja -S . -B cmake_build/android \
-            -DCMAKE_TOOLCHAIN_FILE="$ANDROID_NDK_HOME/build/cmake/android.toolchain.cmake" \
-            -DANDROID_ABI=arm64-v8a \
-            -DANDROID_PLATFORM=android-24 \
-            -DCMAKE_BUILD_TYPE=Release \
-            -DLTD_BOOST_HEADERS_ROOT="$RUNNER_TEMP/boost-headers" \
+          OPENSSL_ROOT="$PWD/thirdparty/openssl-android/arm64-v8a"
+          cmake --preset android \
             -DLTD_BINARY_LAYOUT_VERSION="$VERSION" \
-            -DBoost_INCLUDE_DIR="$RUNNER_TEMP/boost-headers" \
-            -DBoost_INCLUDE_DIRS="$RUNNER_TEMP/boost-headers" \
-            -DBOOST_ROOT="$RUNNER_TEMP/boost-headers" \
-            -DBOOST_INCLUDEDIR="$RUNNER_TEMP/boost-headers" \
-            -DHAVE_CXX_ATOMICS_WITHOUT_LIB=ON \
-            -DHAVE_CXX_ATOMICS8_WITHOUT_LIB=ON \
-            -DHAVE_CXX_ATOMICS64_WITHOUT_LIB=ON
-          cmake --build cmake_build/android --target libtorrent_dart -j4
+            -DLTD_BOOST_HEADERS_ROOT="/usr/include" \
+            -DBoost_INCLUDE_DIR="/usr/include" \
+            -DBoost_INCLUDE_DIRS="/usr/include" \
+            -DBOOST_ROOT="/usr/include" \
+            -DBOOST_INCLUDEDIR="/usr/include" \
+            -DOPENSSL_ROOT_DIR="$OPENSSL_ROOT" \
+            -DOPENSSL_CRYPTO_LIBRARY="$OPENSSL_ROOT/lib/libcrypto.a" \
+            -DOPENSSL_SSL_LIBRARY="$OPENSSL_ROOT/lib/libssl.a" \
+            -DOPENSSL_INCLUDE_DIR="$OPENSSL_ROOT/include"
+          cmake --build --preset android --parallel
 
       - name: Upload Android binary
         uses: actions/upload-artifact@v4
@@ -195,19 +131,24 @@ jobs:
       - name: Install macOS dependencies
         run: |
           brew update
-          brew install cmake ninja boost openssl@3
+          brew install cmake ninja ccache boost openssl@3
+
+      - name: ccache Storage
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ccache
+          key: iOS-ccache-${{ github.sha }}
+          restore-keys: |
+            iOS-ccache-
 
       - name: Configure and build (iOS arm64)
         run: |
           VERSION="$(grep -E '^version:' pubspec.yaml | awk '{print $2}')"
-          cmake -G Xcode -S . -B cmake_build/ios \
-            -DCMAKE_SYSTEM_NAME=iOS \
-            -DCMAKE_OSX_DEPLOYMENT_TARGET=13.0 \
-            -DCMAKE_OSX_ARCHITECTURES=arm64 \
-            -DLTD_BOOST_HEADERS_ROOT=/opt/homebrew/include \
-            -DLTD_BINARY_LAYOUT_VERSION="$VERSION" \
-            -DCMAKE_BUILD_TYPE=Release
-          cmake --build cmake_build/ios --config Release --target libtorrent_dart
+          BOOST_INC="$(brew --prefix boost)/include"
+          cmake --preset ios \
+            -DLTD_BOOST_HEADERS_ROOT="$BOOST_INC" \
+            -DLTD_BINARY_LAYOUT_VERSION="$VERSION"
+          cmake --build --preset ios --parallel
 
       - name: Upload iOS binary
         uses: actions/upload-artifact@v4
@@ -217,7 +158,7 @@ jobs:
 
   publish-release:
     runs-on: ubuntu-latest
-    needs: [build-and-test, build-android, build-ios]
+    needs: [build-linux, build-macos, build-windows, build-android, build-ios]
     permissions:
       contents: write
 

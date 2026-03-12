@@ -8,108 +8,32 @@ on:
   workflow_dispatch:
 
 jobs:
-  build-and-test:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
-
+  build-linux:
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           submodules: recursive
 
-      - name: Setup Dart SDK
-        uses: dart-lang/setup-dart@v1
+      - uses: ./.github/actions/build-native
 
-      - name: Cache Dart packages
-        uses: actions/cache@v4
+  build-macos:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
         with:
-          path: |
-            ~/.pub-cache
-            .dart_tool
-          key: ${{ runner.os }}-dart-${{ hashFiles('pubspec.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-dart-
+          submodules: recursive
 
-      - name: Cache CMake build dirs
-        uses: actions/cache@v4
+      - uses: ./.github/actions/build-native
+
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
         with:
-          path: |
-            cmake_build
-            thirdparty/libtorrent-build
-          key: ${{ runner.os }}-cmake-${{ hashFiles('CMakeLists.txt', 'src/c/**', 'thirdparty/libtorrent/CMakeLists.txt', 'thirdparty/libtorrent/include/**', 'thirdparty/libtorrent/src/**') }}
-          restore-keys: |
-            ${{ runner.os }}-cmake-
+          submodules: recursive
 
-      - name: Install Linux dependencies
-        if: runner.os == 'Linux'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y cmake ninja-build libboost-dev libssl-dev
-
-      - name: Install macOS dependencies
-        if: runner.os == 'macOS'
-        run: |
-          brew update
-          brew install cmake ninja boost openssl@3
-
-      - name: Install Windows dependencies
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          $ErrorActionPreference = 'Stop'
-          $boostDir = Get-ChildItem 'C:\local' -Directory -ErrorAction SilentlyContinue |
-            Where-Object { $_.Name -like 'boost_*' } |
-            Select-Object -First 1
-          if (-not $boostDir) {
-            choco install -y boost-msvc-14.3 --no-progress --limit-output --execution-timeout=1200
-          }
-          cmake --version
-          ninja --version
-
-      - name: Configure and build (Linux)
-        if: runner.os == 'Linux'
-        run: |
-          VERSION="$(grep -E '^version:' pubspec.yaml | awk '{print $2}')"
-          cmake -G Ninja -S . -B cmake_build/linux \
-            -DCMAKE_BUILD_TYPE=Release \
-            -DLTD_BOOST_HEADERS_ROOT=/usr/include \
-            -DLTD_BINARY_LAYOUT_VERSION="$VERSION"
-          cmake --build cmake_build/linux --target libtorrent_dart -j4
-
-      - name: Configure and build (macOS)
-        if: runner.os == 'macOS'
-        run: |
-          VERSION="$(grep -E '^version:' pubspec.yaml | awk '{print $2}')"
-          BOOST_ROOT=/opt/homebrew/include
-          if [ ! -f "$BOOST_ROOT/boost/version.hpp" ]; then
-            BOOST_ROOT=/usr/local/include
-          fi
-          cmake -G Ninja -S . -B cmake_build/macos \
-            -DCMAKE_BUILD_TYPE=Release \
-            -DLTD_BOOST_HEADERS_ROOT="$BOOST_ROOT" \
-            -DLTD_BINARY_LAYOUT_VERSION="$VERSION"
-          cmake --build cmake_build/macos --target libtorrent_dart -j4
-
-      - name: Configure and build (Windows)
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          $ErrorActionPreference = 'Stop'
-          $boostDir = Get-ChildItem 'C:\local' -Directory | Where-Object { $_.Name -like 'boost_*' } | Select-Object -First 1
-          if (-not $boostDir) { throw 'Boost headers not found under C:\local' }
-          $version = (Select-String -Path pubspec.yaml -Pattern '^version:\s*(.+)$').Matches[0].Groups[1].Value.Trim()
-          cmake -G Ninja -S . -B cmake_build/windows -DCMAKE_BUILD_TYPE=Release -DLTD_BOOST_HEADERS_ROOT="$($boostDir.FullName)" -DLTD_BINARY_LAYOUT_VERSION="$version"
-          cmake --build cmake_build/windows --target libtorrent_dart -j4
-
-      - name: Pub get
-        run: dart pub get
-
-      - name: Analyze
-        run: dart analyze
-
-      - name: Test
-        run: dart test
+      - uses: ./.github/actions/build-native
