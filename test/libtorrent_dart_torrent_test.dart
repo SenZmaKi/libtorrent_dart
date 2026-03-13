@@ -14,6 +14,13 @@ void main() {
     final status = torrent.getStatus();
     expect(status.progress, greaterThanOrEqualTo(0));
     expect(status.progress, lessThanOrEqualTo(1));
+    expect(status.totalFailedBytes, greaterThanOrEqualTo(0));
+    expect(status.totalRedundantBytes, greaterThanOrEqualTo(0));
+    expect(status.numComplete, greaterThanOrEqualTo(0));
+    expect(status.numIncomplete, greaterThanOrEqualTo(0));
+    expect(status.numPieces, greaterThanOrEqualTo(0));
+    expect(status.numUploads, greaterThanOrEqualTo(0));
+    expect(status.numConnections, greaterThanOrEqualTo(0));
 
     await sub.cancel();
     torrent.cancel(deleteFiles: false);

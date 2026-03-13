@@ -20,17 +20,37 @@ class SessionStatus {
     required this.hasIncomingConnections,
     required this.uploadRate,
     required this.downloadRate,
+    required this.payloadUploadRate,
+    required this.payloadDownloadRate,
     required this.totalDownload,
     required this.totalUpload,
+    required this.totalPayloadDownload,
+    required this.totalPayloadUpload,
+    required this.totalFailedBytes,
     required this.numPeers,
+    required this.numUnchoked,
+    required this.allowedUploadSlots,
+    required this.dhtNodes,
+    required this.dhtTorrents,
+    required this.dhtGlobalNodes,
   });
 
   final bool hasIncomingConnections;
   final double uploadRate;
   final double downloadRate;
+  final double payloadUploadRate;
+  final double payloadDownloadRate;
   final int totalDownload;
   final int totalUpload;
+  final int totalPayloadDownload;
+  final int totalPayloadUpload;
+  final int totalFailedBytes;
   final int numPeers;
+  final int numUnchoked;
+  final int allowedUploadSlots;
+  final int dhtNodes;
+  final int dhtTorrents;
+  final int dhtGlobalNodes;
 }
 
 class TorrentStatus {
@@ -40,7 +60,14 @@ class TorrentStatus {
     required this.uploadRate,
     required this.totalDone,
     required this.totalWanted,
+    required this.totalFailedBytes,
+    required this.totalRedundantBytes,
     required this.state,
+    required this.numComplete,
+    required this.numIncomplete,
+    required this.numPieces,
+    required this.numUploads,
+    required this.numConnections,
     required this.paused,
     required this.error,
   });
@@ -50,7 +77,14 @@ class TorrentStatus {
   final double uploadRate;
   final int totalDone;
   final int totalWanted;
+  final int totalFailedBytes;
+  final int totalRedundantBytes;
   final int state;
+  final int numComplete;
+  final int numIncomplete;
+  final int numPieces;
+  final int numUploads;
+  final int numConnections;
   final bool paused;
   final String error;
 }
