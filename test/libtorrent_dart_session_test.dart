@@ -8,6 +8,16 @@ void main() {
     final session = createConfiguredSession();
     final status = session.getStatus();
     expect(status.uploadRate, greaterThanOrEqualTo(0));
+    expect(status.payloadUploadRate, greaterThanOrEqualTo(0));
+    expect(status.payloadDownloadRate, greaterThanOrEqualTo(0));
+    expect(status.totalPayloadDownload, greaterThanOrEqualTo(0));
+    expect(status.totalPayloadUpload, greaterThanOrEqualTo(0));
+    expect(status.totalFailedBytes, greaterThanOrEqualTo(0));
+    expect(status.numUnchoked, greaterThanOrEqualTo(0));
+    expect(status.allowedUploadSlots, greaterThanOrEqualTo(0));
+    expect(status.dhtNodes, greaterThanOrEqualTo(0));
+    expect(status.dhtTorrents, greaterThanOrEqualTo(0));
+    expect(status.dhtGlobalNodes, greaterThanOrEqualTo(0));
 
     expect(session.getIntSetting(0x200 + 5), equals(200));
 

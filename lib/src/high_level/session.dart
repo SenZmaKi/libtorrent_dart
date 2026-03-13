@@ -83,9 +83,19 @@ class Session {
         hasIncomingConnections: status.ref.has_incoming_connections != 0,
         uploadRate: status.ref.upload_rate,
         downloadRate: status.ref.download_rate,
+        payloadUploadRate: status.ref.payload_upload_rate,
+        payloadDownloadRate: status.ref.payload_download_rate,
         totalDownload: status.ref.total_download,
         totalUpload: status.ref.total_upload,
+        totalPayloadDownload: status.ref.total_payload_download,
+        totalPayloadUpload: status.ref.total_payload_upload,
+        totalFailedBytes: status.ref.total_failed_bytes,
         numPeers: status.ref.num_peers,
+        numUnchoked: status.ref.num_unchoked,
+        allowedUploadSlots: status.ref.allowed_upload_slots,
+        dhtNodes: status.ref.dht_nodes,
+        dhtTorrents: status.ref.dht_torrents,
+        dhtGlobalNodes: status.ref.dht_global_nodes,
       );
     } finally {
       calloc.free(status);
