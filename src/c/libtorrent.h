@@ -307,6 +307,12 @@ LTD_API int session_pop_alert(void *ses, char *dest, int len, int *category);
 
 LTD_API int session_get_status(void *ses, struct session_status *s,
                                int struct_size);
+LTD_API int session_pause(void *ses);
+LTD_API int session_resume(void *ses);
+LTD_API int session_is_paused(void *ses);
+LTD_API int session_post_torrent_updates(void *ses);
+LTD_API int session_post_session_stats(void *ses);
+LTD_API int session_post_dht_stats(void *ses);
 
 // use SET_* tags in tag list
 LTD_API int session_set_settings(void *ses, int first_tag, ...);
@@ -340,6 +346,18 @@ LTD_API int torrent_get_setting(int tor, int tag, void *value, int *value_size);
 LTD_API int torrent_set_int_setting(int tor, int tag, int value);
 LTD_API int torrent_set_settings_items(int tor, struct lt_tag_item const *items,
                                        int num_items);
+LTD_API int torrent_flush_cache(int tor);
+LTD_API int torrent_force_recheck(int tor);
+LTD_API int torrent_force_reannounce(int tor, int seconds, int tracker_idx);
+LTD_API int torrent_force_dht_announce(int tor);
+LTD_API int torrent_scrape_tracker(int tor, int tracker_idx);
+LTD_API int torrent_clear_error(int tor);
+LTD_API int torrent_queue_position_up(int tor);
+LTD_API int torrent_queue_position_down(int tor);
+LTD_API int torrent_queue_position_top(int tor);
+LTD_API int torrent_queue_position_bottom(int tor);
+LTD_API int torrent_queue_position_set(int tor, int queue_position);
+LTD_API int torrent_queue_position_get(int tor, int *queue_position);
 
 // error reporting helpers for FFI layers
 LTD_API int lt_last_error(struct lt_error *error, int struct_size);

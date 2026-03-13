@@ -953,6 +953,71 @@ TORRENT_EXPORT int session_get_status(void *sesptr, struct session_status *s,
   return 0;
 }
 
+TORRENT_EXPORT int session_pause(void *ses) {
+  clear_last_error();
+  lt::session *s = reinterpret_cast<lt::session *>(ses);
+  if (!s) {
+    set_last_error(-1, "invalid session handle");
+    return -1;
+  }
+  s->pause();
+  return 0;
+}
+
+TORRENT_EXPORT int session_resume(void *ses) {
+  clear_last_error();
+  lt::session *s = reinterpret_cast<lt::session *>(ses);
+  if (!s) {
+    set_last_error(-1, "invalid session handle");
+    return -1;
+  }
+  s->resume();
+  return 0;
+}
+
+TORRENT_EXPORT int session_is_paused(void *ses) {
+  clear_last_error();
+  lt::session *s = reinterpret_cast<lt::session *>(ses);
+  if (!s) {
+    set_last_error(-1, "invalid session handle");
+    return -1;
+  }
+  return s->is_paused() ? 1 : 0;
+}
+
+TORRENT_EXPORT int session_post_torrent_updates(void *ses) {
+  clear_last_error();
+  lt::session *s = reinterpret_cast<lt::session *>(ses);
+  if (!s) {
+    set_last_error(-1, "invalid session handle");
+    return -1;
+  }
+  s->post_torrent_updates();
+  return 0;
+}
+
+TORRENT_EXPORT int session_post_session_stats(void *ses) {
+  clear_last_error();
+  lt::session *s = reinterpret_cast<lt::session *>(ses);
+  if (!s) {
+    set_last_error(-1, "invalid session handle");
+    return -1;
+  }
+  s->post_session_stats();
+  return 0;
+}
+
+TORRENT_EXPORT int session_post_dht_stats(void *ses) {
+  clear_last_error();
+  lt::session *s = reinterpret_cast<lt::session *>(ses);
+  if (!s) {
+    set_last_error(-1, "invalid session handle");
+    return -1;
+  }
+  s->post_dht_stats();
+  return 0;
+}
+
 TORRENT_EXPORT int torrent_get_status(int tor, torrent_status *s,
                                       int struct_size) {
   clear_last_error();
@@ -1242,6 +1307,139 @@ TORRENT_EXPORT int torrent_set_settings_items(int tor, lt_tag_item const *items,
     set_last_error(-1, "unknown exception in torrent_set_settings_items");
     return -1;
   }
+}
+
+TORRENT_EXPORT int torrent_flush_cache(int tor) {
+  clear_last_error();
+  lt::torrent_handle h = get_handle(tor);
+  if (!h.is_valid()) {
+    set_last_error(-1, "invalid torrent handle");
+    return -1;
+  }
+  h.flush_cache();
+  return 0;
+}
+
+TORRENT_EXPORT int torrent_force_recheck(int tor) {
+  clear_last_error();
+  lt::torrent_handle h = get_handle(tor);
+  if (!h.is_valid()) {
+    set_last_error(-1, "invalid torrent handle");
+    return -1;
+  }
+  h.force_recheck();
+  return 0;
+}
+
+TORRENT_EXPORT int torrent_force_reannounce(int tor, int seconds,
+                                            int tracker_idx) {
+  clear_last_error();
+  lt::torrent_handle h = get_handle(tor);
+  if (!h.is_valid()) {
+    set_last_error(-1, "invalid torrent handle");
+    return -1;
+  }
+  h.force_reannounce(seconds, tracker_idx);
+  return 0;
+}
+
+TORRENT_EXPORT int torrent_force_dht_announce(int tor) {
+  clear_last_error();
+  lt::torrent_handle h = get_handle(tor);
+  if (!h.is_valid()) {
+    set_last_error(-1, "invalid torrent handle");
+    return -1;
+  }
+  h.force_dht_announce();
+  return 0;
+}
+
+TORRENT_EXPORT int torrent_scrape_tracker(int tor, int tracker_idx) {
+  clear_last_error();
+  lt::torrent_handle h = get_handle(tor);
+  if (!h.is_valid()) {
+    set_last_error(-1, "invalid torrent handle");
+    return -1;
+  }
+  h.scrape_tracker(tracker_idx);
+  return 0;
+}
+
+TORRENT_EXPORT int torrent_clear_error(int tor) {
+  clear_last_error();
+  lt::torrent_handle h = get_handle(tor);
+  if (!h.is_valid()) {
+    set_last_error(-1, "invalid torrent handle");
+    return -1;
+  }
+  h.clear_error();
+  return 0;
+}
+
+TORRENT_EXPORT int torrent_queue_position_up(int tor) {
+  clear_last_error();
+  lt::torrent_handle h = get_handle(tor);
+  if (!h.is_valid()) {
+    set_last_error(-1, "invalid torrent handle");
+    return -1;
+  }
+  h.queue_position_up();
+  return 0;
+}
+
+TORRENT_EXPORT int torrent_queue_position_down(int tor) {
+  clear_last_error();
+  lt::torrent_handle h = get_handle(tor);
+  if (!h.is_valid()) {
+    set_last_error(-1, "invalid torrent handle");
+    return -1;
+  }
+  h.queue_position_down();
+  return 0;
+}
+
+TORRENT_EXPORT int torrent_queue_position_top(int tor) {
+  clear_last_error();
+  lt::torrent_handle h = get_handle(tor);
+  if (!h.is_valid()) {
+    set_last_error(-1, "invalid torrent handle");
+    return -1;
+  }
+  h.queue_position_top();
+  return 0;
+}
+
+TORRENT_EXPORT int torrent_queue_position_bottom(int tor) {
+  clear_last_error();
+  lt::torrent_handle h = get_handle(tor);
+  if (!h.is_valid()) {
+    set_last_error(-1, "invalid torrent handle");
+    return -1;
+  }
+  h.queue_position_bottom();
+  return 0;
+}
+
+TORRENT_EXPORT int torrent_queue_position_set(int tor, int queue_position) {
+  clear_last_error();
+  lt::torrent_handle h = get_handle(tor);
+  if (!h.is_valid()) {
+    set_last_error(-1, "invalid torrent handle");
+    return -1;
+  }
+  h.queue_position_set(lt::queue_position_t(queue_position));
+  return 0;
+}
+
+TORRENT_EXPORT int torrent_queue_position_get(int tor, int *queue_position) {
+  clear_last_error();
+  lt::torrent_handle h = get_handle(tor);
+  if (!h.is_valid() || !queue_position) {
+    set_last_error(-1, "invalid queue position arguments");
+    return -1;
+  }
+  *queue_position = static_cast<int>(h.queue_position());
+  return 0;
 }
 
 TORRENT_EXPORT int lt_last_error(struct lt_error *error, int struct_size) {
