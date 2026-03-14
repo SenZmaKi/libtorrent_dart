@@ -16,6 +16,8 @@ const sintelMagnet =
     '&ws=https%3A%2F%2Fwebtorrent.io%2Ftorrents%2F'
     '&xs=https%3A%2F%2Fwebtorrent.io%2Ftorrents%2Fsintel.torrent';
 
+const sintelInfohashHex = '08ada5a7a6183aae1e09d831df6748d566095a10';
+
 Session createConfiguredSession() {
   final session = createSession();
   session.setIntSetting(LibtorrentSettingsTag.downloadRateLimit, 5000000);

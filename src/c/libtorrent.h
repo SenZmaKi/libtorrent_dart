@@ -220,6 +220,72 @@ struct lt_tag_item {
   int size;
 };
 
+struct lt_partial_piece_info {
+  int piece_index;
+  int blocks_in_piece;
+  int finished;
+  int writing;
+  int requested;
+};
+
+struct lt_peer_info {
+  char ip[64];
+  int port;
+  char client[128];
+  int up_speed;
+  int down_speed;
+  int payload_up_speed;
+  int payload_down_speed;
+  long long total_download;
+  long long total_upload;
+  int flags;
+  int source;
+};
+
+struct lt_dht_sample {
+  char infohash_hex[41];
+  char address[64];
+  int port;
+};
+
+struct lt_alert_info {
+  int type;
+  int category;
+  int torrent_id;
+  int dht_num_samples;
+  int dht_endpoint_port;
+  char what[64];
+  char message[1024];
+  char dht_endpoint_address[64];
+};
+
+struct lt_magnet_info {
+  char infohash_hex[41];
+  char name[256];
+  char trackers[2048];
+};
+
+struct lt_torrent_file_info {
+  char infohash_hex[41];
+  char name[256];
+  long long total_size;
+  int num_files;
+};
+
+struct lt_open_file_state {
+  int file_index;
+  int open_mode;
+  long long last_use_ms;
+};
+
+struct lt_file_entry {
+  int index;
+  long long size;
+  long long offset;
+  int flags;
+  char path[512];
+};
+
 struct session_status {
   int has_incoming_connections;
 
@@ -293,6 +359,7 @@ LTD_API void session_close(void *ses);
 LTD_API void *session_create_default(void);
 LTD_API void *session_create_items(struct lt_tag_item const *items,
                                    int num_items);
+LTD_API void *session_create_state(char const *state, int size, int flags);
 LTD_API int session_add_magnet(void *ses, char const *magnet_uri,
                                char const *save_path, int download_rate_limit,
                                int upload_rate_limit);
@@ -304,15 +371,74 @@ LTD_API void session_remove_torrent(void *ses, int tor, int flags);
 // return < 0 if there are no alerts. Otherwise returns the
 // type of alert that was returned
 LTD_API int session_pop_alert(void *ses, char *dest, int len, int *category);
+LTD_API int session_pop_alert_info(void *ses, int *type, int *category,
+                                   char *what_dest, int what_len,
+                                   char *message_dest, int message_len);
+LTD_API int session_pop_alert_typed(void *ses, struct lt_alert_info *info,
+                                    struct lt_dht_sample *samples,
+                                    int max_samples, int *total_samples);
+LTD_API int session_wait_for_alert(void *ses, int max_wait_ms, char *dest,
+                                   int len, int *category);
 
 LTD_API int session_get_status(void *ses, struct session_status *s,
                                int struct_size);
+LTD_API int session_listen_port(void *ses, int *port);
+LTD_API int session_ssl_listen_port(void *ses, int *port);
 LTD_API int session_pause(void *ses);
 LTD_API int session_resume(void *ses);
 LTD_API int session_is_paused(void *ses);
+LTD_API void *session_abort(void *ses);
+LTD_API void session_proxy_close(void *proxy);
 LTD_API int session_post_torrent_updates(void *ses);
 LTD_API int session_post_session_stats(void *ses);
 LTD_API int session_post_dht_stats(void *ses);
+LTD_API int session_find_torrent(void *ses, char const *infohash_hex);
+LTD_API int session_get_torrents(void *ses, int *torrent_ids, int max_torrents,
+                                 int *total_torrents);
+LTD_API int session_get_torrent_statuses(void *ses, struct torrent_status *statuses,
+                                         int max_statuses, int *total_statuses);
+LTD_API int session_get_torrent_statuses_flags(void *ses,
+                                               struct torrent_status *statuses,
+                                               int max_statuses,
+                                               int *total_statuses, int flags);
+LTD_API int session_dht_get_peers(void *ses, char const *infohash_hex);
+LTD_API int session_dht_announce(void *ses, char const *infohash_hex, int port);
+LTD_API int session_add_dht_node(void *ses, char const *hostname, int port);
+LTD_API int session_is_dht_running(void *ses);
+LTD_API int session_start_dht(void *ses);
+LTD_API int session_stop_dht(void *ses);
+LTD_API int session_dht_get_item(void *ses, char const *target_hex);
+LTD_API int session_dht_put_item(void *ses, char const *bencoded_data, int size);
+LTD_API int session_dht_sample_infohashes(void *ses, char const *address,
+                                          int port, char const *target_hex,
+                                          struct lt_dht_sample *samples,
+                                          int max_samples, int *total_samples);
+LTD_API int session_get_state(void *ses, char *dest, int len, int *required_len,
+                              int flags);
+LTD_API int session_set_upload_rate_limit(void *ses, int value);
+LTD_API int session_get_upload_rate_limit(void *ses, int *value);
+LTD_API int session_set_download_rate_limit(void *ses, int value);
+LTD_API int session_get_download_rate_limit(void *ses, int *value);
+LTD_API int session_set_connections_limit(void *ses, int value);
+LTD_API int session_get_connections_limit(void *ses, int *value);
+LTD_API int session_set_unchoke_slots_limit(void *ses, int value);
+LTD_API int session_get_unchoke_slots_limit(void *ses, int *value);
+LTD_API int session_set_dht_upload_rate_limit(void *ses, int value);
+LTD_API int session_get_dht_upload_rate_limit(void *ses, int *value);
+LTD_API int session_set_dht_announce_interval(void *ses, int value);
+LTD_API int session_get_dht_announce_interval(void *ses, int *value);
+LTD_API int session_set_dht_max_peers(void *ses, int value);
+LTD_API int session_get_dht_max_peers(void *ses, int *value);
+LTD_API int session_set_dht_max_dht_items(void *ses, int value);
+LTD_API int session_get_dht_max_dht_items(void *ses, int *value);
+LTD_API int session_set_enable_dht(void *ses, int enabled);
+LTD_API int session_get_enable_dht(void *ses, int *enabled);
+LTD_API int session_set_enable_lsd(void *ses, int enabled);
+LTD_API int session_get_enable_lsd(void *ses, int *enabled);
+LTD_API int session_set_enable_upnp(void *ses, int enabled);
+LTD_API int session_get_enable_upnp(void *ses, int *enabled);
+LTD_API int session_set_enable_natpmp(void *ses, int enabled);
+LTD_API int session_get_enable_natpmp(void *ses, int *enabled);
 
 // use SET_* tags in tag list
 LTD_API int session_set_settings(void *ses, int first_tag, ...);
@@ -325,16 +451,43 @@ LTD_API int session_set_string_setting(void *ses, int tag_type, int tag,
 LTD_API int session_add_torrent_items(void *ses,
                                       struct lt_tag_item const *items,
                                       int num_items);
+LTD_API int session_async_add_torrent_items(void *ses,
+                                            struct lt_tag_item const *items,
+                                            int num_items);
 LTD_API int session_set_settings_items(void *ses,
                                        struct lt_tag_item const *items,
                                        int num_items);
 
 LTD_API int torrent_get_status(int tor, struct torrent_status *s,
                                int struct_size);
+LTD_API int torrent_post_download_queue(int tor);
+LTD_API int torrent_post_peer_info(int tor);
+LTD_API int torrent_post_trackers(int tor);
+LTD_API int torrent_get_download_queue(int tor,
+                                       struct lt_partial_piece_info *pieces,
+                                       int max_pieces, int *total_pieces);
+LTD_API int torrent_get_peer_info(int tor, struct lt_peer_info *peers,
+                                  int max_peers, int *total_peers);
+LTD_API int torrent_get_file_progress(int tor, long long *progress,
+                                      int max_files, int *total_files,
+                                      int flags);
+LTD_API int torrent_get_file_status(int tor, struct lt_open_file_state *files,
+                                    int max_files, int *total_files);
+LTD_API int torrent_get_files(int tor, struct lt_file_entry *files, int max_files,
+                              int *total_files);
 
 LTD_API int torrent_pause(int tor);
 LTD_API int torrent_resume(int tor);
 LTD_API int torrent_cancel(void *ses, int tor, int delete_files);
+LTD_API int torrent_read_piece(int tor, int piece);
+LTD_API int torrent_add_piece(int tor, int piece, char const *data, int size,
+                              int flags);
+LTD_API int torrent_have_piece(int tor, int piece);
+LTD_API int torrent_save_resume_data(int tor, int flags);
+LTD_API int torrent_get_resume_data(int tor, char *dest, int len,
+                                    int *required_len, int flags);
+LTD_API int torrent_need_save_resume_data(int tor, int flags);
+LTD_API int torrent_connect_peer(int tor, char const *address, int port);
 LTD_API int torrent_set_progress_callback(int tor, torrent_progress_callback cb,
                                           void *userdata);
 LTD_API int torrent_poll_progress(int tor);
@@ -349,19 +502,64 @@ LTD_API int torrent_set_settings_items(int tor, struct lt_tag_item const *items,
 LTD_API int torrent_flush_cache(int tor);
 LTD_API int torrent_force_recheck(int tor);
 LTD_API int torrent_force_reannounce(int tor, int seconds, int tracker_idx);
+LTD_API int torrent_force_reannounce_flags(int tor, int seconds, int tracker_idx,
+                                           int flags);
 LTD_API int torrent_force_dht_announce(int tor);
+LTD_API int torrent_force_lsd_announce(int tor);
 LTD_API int torrent_scrape_tracker(int tor, int tracker_idx);
 LTD_API int torrent_clear_error(int tor);
+LTD_API int torrent_clear_peers(int tor);
 LTD_API int torrent_queue_position_up(int tor);
 LTD_API int torrent_queue_position_down(int tor);
 LTD_API int torrent_queue_position_top(int tor);
 LTD_API int torrent_queue_position_bottom(int tor);
 LTD_API int torrent_queue_position_set(int tor, int queue_position);
 LTD_API int torrent_queue_position_get(int tor, int *queue_position);
+LTD_API int torrent_add_tracker(int tor, char const *url, int tier);
+LTD_API int torrent_replace_trackers(int tor, char const **urls,
+                                     int const *tiers, int num_trackers);
+LTD_API int torrent_get_trackers(int tor, char *dest, int len);
+LTD_API int torrent_get_url_seeds(int tor, char *dest, int len);
+LTD_API int torrent_get_http_seeds(int tor, char *dest, int len);
+LTD_API int torrent_add_url_seed(int tor, char const *url);
+LTD_API int torrent_remove_url_seed(int tor, char const *url);
+LTD_API int torrent_add_http_seed(int tor, char const *url);
+LTD_API int torrent_remove_http_seed(int tor, char const *url);
+LTD_API int torrent_set_piece_deadline(int tor, int piece_index, int deadline,
+                                       int flags);
+LTD_API int torrent_reset_piece_deadline(int tor, int piece_index);
+LTD_API int torrent_clear_piece_deadlines(int tor);
+LTD_API int torrent_set_file_priority(int tor, int file_index, int priority);
+LTD_API int torrent_get_file_priority(int tor, int file_index, int *priority);
+LTD_API int torrent_set_piece_priority(int tor, int piece_index, int priority);
+LTD_API int torrent_get_piece_priority(int tor, int piece_index, int *priority);
+LTD_API int torrent_prioritize_files(int tor, int const *priorities,
+                                     int num_priorities);
+LTD_API int torrent_get_file_priorities(int tor, int *priorities,
+                                        int max_priorities,
+                                        int *total_priorities);
+LTD_API int torrent_prioritize_pieces(int tor, int const *priorities,
+                                      int num_priorities);
+LTD_API int torrent_get_piece_priorities(int tor, int *priorities,
+                                         int max_priorities,
+                                         int *total_priorities);
+LTD_API int torrent_set_flags(int tor, unsigned long long flags);
+LTD_API int torrent_set_flags_mask(int tor, unsigned long long flags,
+                                   unsigned long long mask);
+LTD_API int torrent_unset_flags(int tor, unsigned long long flags);
+LTD_API int torrent_get_flags(int tor, unsigned long long *flags);
 
 // error reporting helpers for FFI layers
 LTD_API int lt_last_error(struct lt_error *error, int struct_size);
 LTD_API void lt_clear_error(void);
+LTD_API int lt_version(char *dest, int len);
+LTD_API int lt_make_magnet_uri(int tor, char *dest, int len, int *required_len);
+LTD_API int lt_parse_magnet_uri(char const *uri, struct lt_magnet_info *info);
+LTD_API int lt_load_torrent_file(char const *path,
+                                 struct lt_torrent_file_info *info);
+LTD_API int lt_create_torrent_data(char const *source_path,
+                                   char const *tracker_url, int piece_size,
+                                   char *dest, int len, int *required_len);
 
 #ifdef __cplusplus
 }

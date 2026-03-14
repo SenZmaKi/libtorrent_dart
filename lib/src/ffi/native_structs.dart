@@ -23,6 +23,165 @@ final class LtTagItemNative extends Struct {
   external int size;
 }
 
+final class LtPartialPieceInfoNative extends Struct {
+  @Int32()
+  external int piece_index;
+
+  @Int32()
+  external int blocks_in_piece;
+
+  @Int32()
+  external int finished;
+
+  @Int32()
+  external int writing;
+
+  @Int32()
+  external int requested;
+}
+
+final class LtPeerInfoNative extends Struct {
+  @Array(64)
+  external Array<Int8> ip;
+
+  @Int32()
+  external int port;
+
+  @Array(128)
+  external Array<Int8> client;
+
+  @Int32()
+  external int up_speed;
+
+  @Int32()
+  external int down_speed;
+
+  @Int32()
+  external int payload_up_speed;
+
+  @Int32()
+  external int payload_down_speed;
+
+  @Int64()
+  external int total_download;
+
+  @Int64()
+  external int total_upload;
+
+  @Int32()
+  external int flags;
+
+  @Int32()
+  external int source;
+}
+
+final class LtDhtSampleNative extends Struct {
+  @Array(41)
+  external Array<Int8> infohash_hex;
+
+  @Array(64)
+  external Array<Int8> address;
+
+  @Int32()
+  external int port;
+}
+
+final class LtAlertInfoNative extends Struct {
+  @Int32()
+  external int type;
+
+  @Int32()
+  external int category;
+
+  @Int32()
+  external int torrent_id;
+
+  @Int32()
+  external int dht_num_samples;
+
+  @Int32()
+  external int dht_endpoint_port;
+
+  @Array(64)
+  external Array<Int8> what;
+
+  @Array(1024)
+  external Array<Int8> message;
+
+  @Array(64)
+  external Array<Int8> dht_endpoint_address;
+}
+
+final class LtMagnetInfoNative extends Struct {
+  @Array(41)
+  external Array<Int8> infohash_hex;
+
+  @Array(256)
+  external Array<Int8> name;
+
+  @Array(2048)
+  external Array<Int8> trackers;
+}
+
+final class LtTorrentFileInfoNative extends Struct {
+  @Array(41)
+  external Array<Int8> infohash_hex;
+
+  @Array(256)
+  external Array<Int8> name;
+
+  @Int64()
+  external int total_size;
+
+  @Int32()
+  external int num_files;
+}
+
+final class LtOpenFileStateNative extends Struct {
+  @Int32()
+  external int file_index;
+
+  @Int32()
+  external int open_mode;
+
+  @Int64()
+  external int last_use_ms;
+}
+
+final class LtFileEntryNative extends Struct {
+  @Int32()
+  external int index;
+
+  @Int64()
+  external int size;
+
+  @Int64()
+  external int offset;
+
+  @Int32()
+  external int flags;
+
+  @Array(512)
+  external Array<Int8> path;
+}
+
+final class ProxySettingNative extends Struct {
+  @Array(256)
+  external Array<Int8> hostname;
+
+  @Int32()
+  external int port;
+
+  @Array(256)
+  external Array<Int8> username;
+
+  @Array(256)
+  external Array<Int8> password;
+
+  @Int32()
+  external int type;
+}
+
 final class SessionStatusNative extends Struct {
   @Int32()
   external int has_incoming_connections;
