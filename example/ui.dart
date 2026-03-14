@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:libtorrent_dart/src/libtorrent_dart.dart';
+import 'package:libtorrent_dart/libtorrent_dart.dart';
 
 import 'torrent_session.dart';
 
@@ -18,7 +18,7 @@ String stateLabel(int state) => switch (state) {
 };
 
 String formatBytes(int bytes) {
-  if (bytes < 1024) return '${bytes} B';
+  if (bytes < 1024) return '$bytes B';
   if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
   if (bytes < 1024 * 1024 * 1024) {
     return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';

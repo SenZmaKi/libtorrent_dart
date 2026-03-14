@@ -53,5 +53,5 @@ void main() async {
     exit(1);
   }
 
-  print('Deployment sequence initiated.');
+  print('Release sequence initiated.');
 }

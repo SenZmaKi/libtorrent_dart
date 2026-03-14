@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:libtorrent_dart/src/libtorrent_dart.dart';
+import 'package:libtorrent_dart/libtorrent_dart.dart';
 
 const _defaultMagnet =
     'magnet:?xt=urn:btih:08ada5a7a6183aae1e09d831df6748d566095a10'

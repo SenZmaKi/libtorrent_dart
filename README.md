@@ -2,14 +2,14 @@
 
 Dart bindings for [libtorrent-rasterbar](https://github.com/arvidn/libtorrent).
 
-This package exposes two direct entry points:
+This package exposes two entry points:
 
-- High-level wrapper API: `package:libtorrent_dart/src/libtorrent_dart.dart`
-- Low-level FFI API: `package:libtorrent_dart/src/libtorrent_dart_ffi.dart`
+- High-level wrapper API: `package:libtorrent_dart/libtorrent_dart.dart`
+- Low-level FFI API: `package:libtorrent_dart/libtorrent_dart_ffi.dart`
 
 ## Installation
 
-Add this to your `pubspec.yaml`
+Add this to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
@@ -22,7 +22,7 @@ dependencies:
 Then run:
 
 ```bash
-flutter pub get
+dart pub get
 ```
 
 ## Usage

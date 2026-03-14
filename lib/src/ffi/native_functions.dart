@@ -1,3 +1,4 @@
+// ignore_for_file: non_constant_identifier_names
 part of '../libtorrent_dart_ffi.dart';
 
 @Native<Pointer<Void> Function()>()
