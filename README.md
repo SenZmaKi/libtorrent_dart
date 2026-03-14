@@ -33,10 +33,10 @@ Check out the [example](example/example.dart) for a quick start.
 
 Build instructions for all supported platforms (macOS, Linux, Windows, Android, iOS) are in:
 
-- `docs/BUILD.md`
+- [BUILD.md](docs/BUILD.md)
 
-## API compatibility
+## API port coverage
 
-Compatibility and bridge coverage notes are tracked in:
+Libtorrent API port coverage is tracked in:
 
-- `docs/API_COMPATIBILITY.md`
+- [API_PORT.md](docs/API_PORT.md)
