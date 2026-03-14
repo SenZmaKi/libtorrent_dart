@@ -1,4 +1,4 @@
-# libtorrent API Port Coverage (Spec vs Current Port)
+# libtorrent API Parity (Spec vs Current Port)
 
 This document compares the holistic C++ API described in `docs/LIBTORRENT_API_SPEC.md` (libtorrent 2.0.11) against the current `libtorrent_dart` port.
 

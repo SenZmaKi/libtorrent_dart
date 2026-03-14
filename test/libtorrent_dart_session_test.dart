@@ -214,6 +214,29 @@ void main() {
     proxy.close();
   });
 
+  test('session getBoolSetting and secondary proxy setters are callable', () {
+    final session = createConfiguredSession();
+
+    // getBoolSetting is the bool interpretation layer on top of getIntSetting.
+    // SET_MAX_CONNECTIONS (0x200+5) is readable via session_get_setting.
+    expect(session.getBoolSetting(LibtorrentTag.setMaxConnections), isA<bool>());
+
+    // The four per-service proxy setters each call _setProxySetting with a
+    // different first tag. setProxy() is already exercised in the lifecycle
+    // test; confirm the remaining four do not throw.
+    const proxy = ProxySetting(
+      hostname: '127.0.0.1',
+      port: 1080,
+      type: LibtorrentProxyType.socks5,
+    );
+    expect(() => session.setPeerProxy(proxy), returnsNormally);
+    expect(() => session.setWebSeedProxy(proxy), returnsNormally);
+    expect(() => session.setTrackerProxy(proxy), returnsNormally);
+    expect(() => session.setDhtProxy(proxy), returnsNormally);
+
+    session.close();
+  });
+
   test('session remove supports delete_partfile flag', () {
     final session = createConfiguredSession();
     final torrent = addSintel(session);

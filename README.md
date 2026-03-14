@@ -1,6 +1,6 @@
 # libtorrent_dart
 
-Dart FFI wrapper over [libtorrent-rasterbar](https://github.com/arvidn/libtorrent).
+Dart bindings for [libtorrent-rasterbar](https://github.com/arvidn/libtorrent).
 
 This package exposes two direct entry points:
 
@@ -29,14 +29,14 @@ flutter pub get
 
 Check out the [example](example/example.dart) for a quick start.
 
+## Libtorrent API parity
+
+Libtorrent API parity is tracked in:
+
+- [LIBTORRENT_API_PARITY.md](docs/LIBTORRENT_API_PARITY.md)
+
 ## Build
 
 Build instructions for all supported platforms (macOS, Linux, Windows, Android, iOS) are in:
 
 - [BUILD.md](docs/BUILD.md)
-
-## API port coverage
-
-Libtorrent API port coverage is tracked in:
-
-- [API_PORT.md](docs/API_PORT.md)

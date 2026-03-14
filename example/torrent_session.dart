@@ -69,7 +69,7 @@ class DownloadSession {
 
     final torrent = session.addMagnet(magnetUri: magnetUri, savePath: savePath);
     // Disable auto-management and start manually for explicit pause/resume control.
-    torrent.unsetFlags(TorrentFlag.autoManaged);
+    torrent.unsetFlags(LibtorrentTorrentFlags.autoManaged);
     torrent.resume();
 
     return DownloadSession._(

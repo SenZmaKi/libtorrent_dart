@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:libtorrent_dart/src/libtorrent_dart.dart';
 import 'package:test/test.dart';
 
@@ -125,6 +127,72 @@ void main() {
     torrent.forceRecheck();
     expect(() => torrent.saveResumeData(), returnsNormally);
     expect(torrent.needSaveResumeData(), isA<bool>());
+
+    torrent.cancel(deleteFiles: false);
+    session.close();
+  });
+
+  test('piece data, file/piece priority, resume-data, and deadline APIs are callable', () {
+    final session = createConfiguredSession();
+    final torrent = addSintel(session);
+
+    // Resume data — saveResumeData is async (fires an alert); getResumeData
+    // returns the bencoded blob if already available, or may fail gracefully.
+    expect(() => torrent.saveResumeData(), returnsNormally);
+    expect(torrent.needSaveResumeData(), isA<bool>());
+    try {
+      expect(torrent.getResumeData(), isA<Uint8List>());
+    } on LibtorrentException {
+      // acceptable when no resume data has been written yet
+    }
+
+    // Piece data — invalid indices return graceful errors.
+    expect(
+      () => torrent.readPiece(-1),
+      throwsA(isA<LibtorrentException>()),
+    );
+    expect(
+      () => torrent.addPiece(-1, Uint8List.fromList([1, 2, 3])),
+      throwsA(isA<LibtorrentException>()),
+    );
+    expect(
+      () => torrent.havePiece(-1),
+      throwsA(isA<LibtorrentException>()),
+    );
+
+    // Piece deadlines — may fail before metadata is available.
+    try {
+      torrent.setPieceDeadline(0, 1000);
+      torrent.resetPieceDeadline(0);
+    } on LibtorrentException {
+      // metadata not yet available for magnet-added torrents
+    }
+    torrent.clearPieceDeadlines();
+
+    // File priorities — may fail before metadata is available.
+    try {
+      torrent.setFilePriority(0, 1);
+      expect(torrent.getFilePriority(0), greaterThanOrEqualTo(0));
+      torrent.prioritizeFiles([1]);
+      expect(torrent.getFilePriorities(), isA<List<int>>());
+    } on LibtorrentException {
+      // metadata not yet available
+    }
+
+    // Piece priorities — may fail before metadata is available.
+    try {
+      torrent.setPiecePriority(0, 1);
+      expect(torrent.getPiecePriority(0), greaterThanOrEqualTo(0));
+      torrent.prioritizePieces([1]);
+      expect(torrent.getPiecePriorities(), isA<List<int>>());
+    } on LibtorrentException {
+      // metadata not yet available
+    }
+
+    // applySettingsFromTags is an alias for setSettingsFromTags.
+    torrent.applySettingsFromTags([
+      LibtorrentTagItem.intValue(LibtorrentTag.setDownloadRateLimit, 1000000),
+    ]);
 
     torrent.cancel(deleteFiles: false);
     session.close();
