@@ -37,7 +37,7 @@ Libtorrent API parity is tracked in:
 
 ## Platforms
 - Confirmed to work on windows, linux and macos, it should work on android and ios too but I haven't tested those yet, when I do I will update this section.
-- On ios https torrents don't work though
+- HTTPS torrents are not yet supported on ios.
 
 ## Build
 
