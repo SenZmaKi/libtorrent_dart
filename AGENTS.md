@@ -1,2 +1,3 @@
+- When creating tests make the same test replicate it in the integration tests.
 - Once you completely finish task or answer a question prompt me using the question/prompt tool to review it and in the options for the prompt have good and other. Every time even after initially prompting me do it recursively.
 - Keep the api bindings as close to the original C++ API as possible, even if it means using less idiomatic Dart. The goal is to make it easy for users familiar with libtorrent's C++ API to understand and use the Dart bindings. But doing stuff like translating numeric flags to booleans or enums is fine at the high level wrapper layer not the FFI layer.

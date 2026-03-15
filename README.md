@@ -24,6 +24,7 @@ Then run:
 ```bash
 dart pub get
 ```
+
 There is a build hook that attempts to download the required [binaries](https://github.com/SenZmaKi/libtorrent_dart/releases/latest) for the current platform and library version if they are not already present in the expected path.
 
 ## Usage
@@ -38,10 +39,9 @@ Libtorrent API parity is tracked in:
 
 ## Platforms
 
-- Confirmed to work on Windows, Linux, and macOS.
-- Should also work on Android and iOS, but these platforms have not yet been tested. This section will be updated once testing is completed.
+- Tested on Windows, Linux, macOS and Android.
 - HTTPS torrents are currently not supported on iOS.
-  
+
 ## Build
 
 Build instructions for all supported platforms (macOS, Linux, Windows, Android, iOS) are in:
