@@ -127,7 +127,7 @@ runs:
 
     - name: Analyze
       shell: bash
-      run: dart analyze --exclude=mobile_test
+      run: dart analyze
 
     - name: Test
       shell: bash
