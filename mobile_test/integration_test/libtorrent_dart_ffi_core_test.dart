@@ -44,7 +44,9 @@ void main() {
     calloc.free(magnetUri);
     calloc.free(parsedMagnet);
 
-    final tempDir = Directory(testTempPath).createTempSync('libtorrent_dart_ffi_');
+    final tempDir = Directory(
+      testTempPath,
+    ).createTempSync('libtorrent_dart_ffi_');
     try {
       final payload = File('${tempDir.path}/payload.bin');
       payload.writeAsBytesSync(List<int>.generate(2048, (i) => i % 251));

@@ -213,16 +213,23 @@ class Session {
   TorrentHandle addTorrentFile({
     required String torrentPath,
     required String savePath,
+    Map<int, String>? renamedFiles,
   }) {
     return addTorrentFromTags([
       LibtorrentTagItem.stringValue(LibtorrentTag.torFilename, torrentPath),
       LibtorrentTagItem.stringValue(LibtorrentTag.torSavePath, savePath),
+      if (renamedFiles != null)
+        LibtorrentTagItem.renamedFilesValue(
+          LibtorrentTag.torRenamedFiles,
+          renamedFiles,
+        ),
     ]);
   }
 
   TorrentHandle addTorrentData({
     required Uint8List torrentData,
     required String savePath,
+    Map<int, String>? renamedFiles,
   }) {
     return addTorrentFromTags([
       LibtorrentTagItem.bytesValue(LibtorrentTag.torTorrent, torrentData),
@@ -231,6 +238,11 @@ class Session {
         torrentData.length,
       ),
       LibtorrentTagItem.stringValue(LibtorrentTag.torSavePath, savePath),
+      if (renamedFiles != null)
+        LibtorrentTagItem.renamedFilesValue(
+          LibtorrentTag.torRenamedFiles,
+          renamedFiles,
+        ),
     ]);
   }
 

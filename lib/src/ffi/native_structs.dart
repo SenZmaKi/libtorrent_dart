@@ -24,6 +24,13 @@ final class LtTagItemNative extends Struct {
   external int size;
 }
 
+final class LtRenamedFileEntryNative extends Struct {
+  @Int32()
+  external int file_index;
+
+  external Pointer<Char> new_filename;
+}
+
 final class LtPartialPieceInfoNative extends Struct {
   @Int32()
   external int piece_index;

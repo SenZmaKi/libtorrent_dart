@@ -455,6 +455,31 @@ int parse_add_torrent_items(lt_tag_item const *items, int const num_items,
     case TOR_STORAGE_MODE:
       params.storage_mode = static_cast<lt::storage_mode_t>(item.int_value);
       break;
+    case TOR_RENAMED_FILES: {
+      if (item.size < 0) {
+        error_message = "invalid renamed files count";
+        return -1;
+      }
+      params.renamed_files.clear();
+      if (item.size == 0)
+        break;
+      auto renamed_files =
+          reinterpret_cast<lt_renamed_file_entry const *>(item.ptr_value);
+      if (!renamed_files) {
+        error_message = "invalid renamed files pointer";
+        return -1;
+      }
+      for (int j = 0; j < item.size; ++j) {
+        auto const &entry = renamed_files[j];
+        if (entry.file_index < 0) {
+          error_message = "invalid renamed file index";
+          return -1;
+        }
+        params.renamed_files[lt::file_index_t(entry.file_index)] =
+            entry.new_filename ? entry.new_filename : "";
+      }
+      break;
+    }
     default:
       break;
     }
@@ -2166,6 +2191,30 @@ TORRENT_EXPORT int torrent_move_storage(int tor, const char *path, int flags) {
   }
   h.move_storage(path, flags);
   return 0;
+}
+
+TORRENT_EXPORT int torrent_rename_file(int tor, int file_index,
+                                       char const *new_filename) {
+  clear_last_error();
+  try {
+    if (!new_filename || file_index < 0) {
+      set_last_error(-1, "invalid rename_file arguments");
+      return -1;
+    }
+    lt::torrent_handle h = get_handle(tor);
+    if (!h.is_valid()) {
+      set_last_error(-1, "invalid torrent handle");
+      return -1;
+    }
+    h.rename_file(lt::file_index_t(file_index), new_filename);
+    return 0;
+  } catch (std::exception const &e) {
+    set_last_error(-1, e.what());
+    return -1;
+  } catch (...) {
+    set_last_error(-1, "unknown exception in torrent_rename_file");
+    return -1;
+  }
 }
 
 TORRENT_EXPORT int torrent_get_name(int tor, char *dest, int len) {

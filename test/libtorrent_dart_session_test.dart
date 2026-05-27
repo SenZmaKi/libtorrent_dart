@@ -219,7 +219,10 @@ void main() {
 
     // getBoolSetting is the bool interpretation layer on top of getIntSetting.
     // SET_MAX_CONNECTIONS (0x200+5) is readable via session_get_setting.
-    expect(session.getBoolSetting(LibtorrentTag.setMaxConnections), isA<bool>());
+    expect(
+      session.getBoolSetting(LibtorrentTag.setMaxConnections),
+      isA<bool>(),
+    );
 
     // The four per-service proxy setters each call _setProxySetting with a
     // different first tag. setProxy() is already exercised in the lifecycle
@@ -271,6 +274,7 @@ void main() {
       final torFromFile = sessionFromFile.addTorrentFile(
         torrentPath: torrentFile.path,
         savePath: tempDir.path,
+        renamedFiles: {0: payload.path},
       );
       expect(torFromFile.id, greaterThanOrEqualTo(0));
       torFromFile.cancel(deleteFiles: false);
@@ -280,6 +284,7 @@ void main() {
       final torFromData = sessionFromData.addTorrentData(
         torrentData: torrentData,
         savePath: tempDir.path,
+        renamedFiles: {0: payload.path},
       );
       expect(torFromData.id, greaterThanOrEqualTo(0));
       torFromData.cancel(deleteFiles: false);

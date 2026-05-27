@@ -58,6 +58,7 @@ class LibtorrentTag {
   static const int torSeedMode = 0x100 + 15;
   static const int torOverrideResumeData = 0x100 + 16;
   static const int torStorageMode = 0x100 + 17;
+  static const int torRenamedFiles = 0x100 + 18;
 
   static const int setUploadRateLimit = 0x200;
   static const int setDownloadRateLimit = 0x200 + 1;
@@ -165,6 +166,7 @@ class LibtorrentTagItem {
     required this.tag,
     this.intValue = 0,
     this.stringValue,
+    this.renamedFilesValue,
     this.bytesValue,
     this.pointerValue,
     this.size = 0,
@@ -173,6 +175,7 @@ class LibtorrentTagItem {
   final int tag;
   final int intValue;
   final String? stringValue;
+  final Map<int, String>? renamedFilesValue;
   final Uint8List? bytesValue;
   final Pointer<Void>? pointerValue;
   final int size;
@@ -181,6 +184,14 @@ class LibtorrentTagItem {
       LibtorrentTagItem._(tag: tag, intValue: value);
   factory LibtorrentTagItem.stringValue(int tag, String value) =>
       LibtorrentTagItem._(tag: tag, stringValue: value);
+  factory LibtorrentTagItem.renamedFilesValue(
+    int tag,
+    Map<int, String> value,
+  ) => LibtorrentTagItem._(
+    tag: tag,
+    renamedFilesValue: Map<int, String>.unmodifiable(value),
+    size: value.length,
+  );
   factory LibtorrentTagItem.bytesValue(int tag, Uint8List value) =>
       LibtorrentTagItem._(tag: tag, bytesValue: value, size: value.length);
   factory LibtorrentTagItem.pointerValue(

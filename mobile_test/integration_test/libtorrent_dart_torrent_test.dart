@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -139,71 +140,68 @@ void main() {
     session.close();
   });
 
-  test('piece data, file/piece priority, resume-data, and deadline APIs are callable', () {
-    final session = createConfiguredSession();
-    final torrent = addSintel(session);
+  test(
+    'piece data, file/piece priority, resume-data, and deadline APIs are callable',
+    () {
+      final session = createConfiguredSession();
+      final torrent = addSintel(session);
 
-    // Resume data — saveResumeData is async (fires an alert); getResumeData
-    // returns the bencoded blob if already available, or may fail gracefully.
-    expect(() => torrent.saveResumeData(), returnsNormally);
-    expect(torrent.needSaveResumeData(), isA<bool>());
-    try {
-      expect(torrent.getResumeData(), isA<Uint8List>());
-    } on LibtorrentException {
-      // acceptable when no resume data has been written yet
-    }
+      // Resume data — saveResumeData is async (fires an alert); getResumeData
+      // returns the bencoded blob if already available, or may fail gracefully.
+      expect(() => torrent.saveResumeData(), returnsNormally);
+      expect(torrent.needSaveResumeData(), isA<bool>());
+      try {
+        expect(torrent.getResumeData(), isA<Uint8List>());
+      } on LibtorrentException {
+        // acceptable when no resume data has been written yet
+      }
 
-    // Piece data — invalid indices return graceful errors.
-    expect(
-      () => torrent.readPiece(-1),
-      throwsA(isA<LibtorrentException>()),
-    );
-    expect(
-      () => torrent.addPiece(-1, Uint8List.fromList([1, 2, 3])),
-      throwsA(isA<LibtorrentException>()),
-    );
-    expect(
-      () => torrent.havePiece(-1),
-      throwsA(isA<LibtorrentException>()),
-    );
+      // Piece data — invalid indices return graceful errors.
+      expect(() => torrent.readPiece(-1), throwsA(isA<LibtorrentException>()));
+      expect(
+        () => torrent.addPiece(-1, Uint8List.fromList([1, 2, 3])),
+        throwsA(isA<LibtorrentException>()),
+      );
+      expect(() => torrent.havePiece(-1), throwsA(isA<LibtorrentException>()));
 
-    // Piece deadlines — may fail before metadata is available.
-    try {
-      torrent.setPieceDeadline(0, 1000);
-      torrent.resetPieceDeadline(0);
-    } on LibtorrentException {
-      // metadata not yet available for magnet-added torrents
-    }
-    torrent.clearPieceDeadlines();
+      // Piece deadlines — may fail before metadata is available.
+      try {
+        torrent.setPieceDeadline(0, 1000);
+        torrent.resetPieceDeadline(0);
+      } on LibtorrentException {
+        // metadata not yet available for magnet-added torrents
+      }
+      torrent.clearPieceDeadlines();
 
-    // File priorities — may fail before metadata is available.
-    try {
-      torrent.setFilePriority(0, 1);
-      expect(torrent.getFilePriority(0), greaterThanOrEqualTo(0));
-      torrent.prioritizeFiles([1]);
-      expect(torrent.getFilePriorities(), isA<List<int>>());
-    } on LibtorrentException {
-      // metadata not yet available
-    }
+      // File priorities — may fail before metadata is available.
+      try {
+        torrent.setFilePriority(0, 1);
+        expect(torrent.getFilePriority(0), greaterThanOrEqualTo(0));
+        torrent.prioritizeFiles([1]);
+        expect(torrent.getFilePriorities(), isA<List<int>>());
+      } on LibtorrentException {
+        // metadata not yet available
+      }
 
-    // Piece priorities — may fail before metadata is available.
-    try {
-      torrent.setPiecePriority(0, 1);
-      expect(torrent.getPiecePriority(0), greaterThanOrEqualTo(0));
-      torrent.prioritizePieces([1]);
-      expect(torrent.getPiecePriorities(), isA<List<int>>());
-    } on LibtorrentException {
-      // metadata not yet available
-    }
+      // Piece priorities — may fail before metadata is available.
+      try {
+        torrent.setPiecePriority(0, 1);
+        expect(torrent.getPiecePriority(0), greaterThanOrEqualTo(0));
+        torrent.prioritizePieces([1]);
+        expect(torrent.getPiecePriorities(), isA<List<int>>());
+      } on LibtorrentException {
+        // metadata not yet available
+      }
 
-    // applySettingsFromTags is an alias for setSettingsFromTags.
-    torrent.applySettingsFromTags([
-      LibtorrentTagItem.intValue(LibtorrentTag.setDownloadRateLimit, 1000000),
-    ]);
+      // applySettingsFromTags is an alias for setSettingsFromTags.
+      torrent.applySettingsFromTags([
+        LibtorrentTagItem.intValue(LibtorrentTag.setDownloadRateLimit, 1000000),
+      ]);
 
-    torrent.cancel(deleteFiles: false);
-    session.close();
-  });
+      torrent.cancel(deleteFiles: false);
+      session.close();
+    },
+  );
 
   test('tag-driven APIs and error propagation still work', () {
     final session = createSession();
@@ -227,4 +225,44 @@ void main() {
     );
     session.close();
   });
+
+  test(
+    'renamedFiles, savePath, moveStorage, and renameFile APIs are callable',
+    () {
+      final tempDir = Directory(
+        testTempPath,
+      ).createTempSync('libtorrent_dart_');
+      try {
+        final payload = File('${tempDir.path}/payload.bin');
+        payload.writeAsBytesSync(List<int>.generate(4096, (i) => i % 251));
+        final torrentData = createTorrentData(
+          sourcePath: payload.path,
+          trackerUrl: 'http://127.0.0.1/announce',
+        );
+
+        final session = createConfiguredSession();
+        final torrent = session.addTorrentData(
+          torrentData: torrentData,
+          savePath: tempDir.path,
+          renamedFiles: {0: payload.path},
+        );
+
+        expect(torrent.savePath, equals(tempDir.path));
+        expect(torrent.getFiles(), isNotEmpty);
+        expect(
+          () => torrent.renameFile(0, 'renamed/payload.bin'),
+          returnsNormally,
+        );
+        expect(
+          () => torrent.moveStorage('${tempDir.path}/moved'),
+          returnsNormally,
+        );
+
+        torrent.cancel(deleteFiles: false);
+        session.close();
+      } finally {
+        tempDir.deleteSync(recursive: true);
+      }
+    },
+  );
 }

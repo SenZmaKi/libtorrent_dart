@@ -29,6 +29,22 @@ _MarshaledTagItems _marshalTagItems(List<LibtorrentTagItem> src) {
       d.string_value = p;
       allocations.add(p.cast<Void>());
     }
+    if (s.renamedFilesValue != null) {
+      final values =
+          s.renamedFilesValue!.entries.toList()
+            ..sort((a, b) => a.key.compareTo(b.key));
+      final array = calloc<ffi.LtRenamedFileEntryNative>(values.length);
+      allocations.add(array.cast<Void>());
+      for (var j = 0; j < values.length; j++) {
+        final p = values[j].value.toNativeUtf8(allocator: calloc).cast<Char>();
+        final entry = (array + j).ref;
+        entry.file_index = values[j].key;
+        entry.new_filename = p;
+        allocations.add(p.cast<Void>());
+      }
+      d.ptr_value = array.cast<Void>();
+      d.size = values.length;
+    }
     if (s.bytesValue != null) {
       final b = calloc<Uint8>(s.bytesValue!.length);
       b.asTypedList(s.bytesValue!.length).setAll(0, s.bytesValue!);

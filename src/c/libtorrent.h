@@ -81,6 +81,7 @@ enum tags {
   TOR_SEED_MODE,            // int
   TOR_OVERRIDE_RESUME_DATA, // int
   TOR_STORAGE_MODE,         // int
+  TOR_RENAMED_FILES,        // lt_renamed_file_entry const* (count in size)
 
   SET_UPLOAD_RATE_LIMIT = 0x200, // int
   SET_DOWNLOAD_RATE_LIMIT,       // int
@@ -244,6 +245,11 @@ struct lt_tag_item {
   char const *string_value;
   void const *ptr_value;
   int size;
+};
+
+struct lt_renamed_file_entry {
+  int file_index;
+  char const *new_filename;
 };
 
 struct lt_partial_piece_info {
@@ -506,6 +512,8 @@ LTD_API int torrent_pause(int tor, int graceful);
 LTD_API int torrent_resume(int tor);
 LTD_API int torrent_cancel(void *ses, int tor, int delete_files);
 LTD_API int torrent_move_storage(int tor, const char *path, int flags);
+LTD_API int torrent_rename_file(int tor, int file_index,
+                                char const *new_filename);
 LTD_API int torrent_get_name(int tor, char *dest, int len);
 LTD_API int torrent_get_save_path(int tor, char *dest, int len);
 LTD_API int torrent_get_info_hash(int tor, char *dest, int len);

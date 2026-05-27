@@ -144,6 +144,13 @@ void main() {
     calloc.free(replaceTiers);
     final textBuf = calloc<Int8>(8192);
     expect(
+      ffi.torrent_get_save_path(tor, textBuf.cast<Char>(), 8192),
+      equals(0),
+    );
+    final movedSavePath =
+        '/tmp/libtorrent_dart_raw'.toNativeUtf8(allocator: calloc).cast<Char>();
+    expect(ffi.torrent_move_storage(tor, movedSavePath, 0), equals(0));
+    expect(
       ffi.torrent_get_trackers(tor, textBuf.cast<Char>(), 8192),
       equals(0),
     );
@@ -243,6 +250,7 @@ void main() {
     calloc.free(filePriorityTotal);
     calloc.free(piecePriorityTotal);
     calloc.free(textBuf);
+    calloc.free(movedSavePath);
     calloc.free(trackerUrl);
     calloc.free(seedUrl);
 

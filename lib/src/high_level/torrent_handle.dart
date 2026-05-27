@@ -42,6 +42,31 @@ class TorrentHandle {
     }
   }
 
+  void moveStorage(String path, {int flags = 0}) {
+    final pathPtr = path.toNativeUtf8(allocator: calloc);
+    try {
+      if (ffi.torrent_move_storage(id, pathPtr.cast<Char>(), flags) != 0) {
+        _throwLastError('Failed to move storage');
+      }
+    } finally {
+      calloc.free(pathPtr);
+    }
+  }
+
+  void renameFile(int fileIndex, String newFilename) {
+    final pathPtr = newFilename.toNativeUtf8(allocator: calloc);
+    try {
+      if (ffi.torrent_rename_file(id, fileIndex, pathPtr.cast<Char>()) != 0) {
+        _throwLastError('Failed to rename file');
+      }
+    } finally {
+      calloc.free(pathPtr);
+    }
+  }
+
+  String get savePath =>
+      _readString((dest, len) => ffi.torrent_get_save_path(id, dest, len));
+
   void cancel({bool deleteFiles = true, bool deletePartfile = false}) {
     if (deletePartfile) {
       var flags = 0;
@@ -497,6 +522,18 @@ class TorrentHandle {
       final joined = buffer.cast<Utf8>().toDartString();
       if (joined.isEmpty) return <String>[];
       return joined.split('\n');
+    } finally {
+      calloc.free(buffer);
+    }
+  }
+
+  String _readString(int Function(Pointer<Char>, int) reader) {
+    final buffer = calloc<Int8>(4096);
+    try {
+      if (reader(buffer.cast<Char>(), 4096) != 0) {
+        _throwLastError('Failed to read string');
+      }
+      return buffer.cast<Utf8>().toDartString();
     } finally {
       calloc.free(buffer);
     }

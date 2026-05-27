@@ -486,6 +486,19 @@ external int torrent_poll_progress(int torrentId);
 @Native<Void Function(Int32)>()
 external void torrent_clear_progress_callback(int torrentId);
 
+@Native<Int32 Function(Int32, Pointer<Char>, Int32)>()
+external int torrent_move_storage(int torrentId, Pointer<Char> path, int flags);
+
+@Native<Int32 Function(Int32, Int32, Pointer<Char>)>()
+external int torrent_rename_file(
+  int torrentId,
+  int fileIndex,
+  Pointer<Char> newFilename,
+);
+
+@Native<Int32 Function(Int32, Pointer<Char>, Int32)>()
+external int torrent_get_save_path(int torrentId, Pointer<Char> dest, int len);
+
 @Native<Int32 Function(Int32, Int32, Int32)>()
 external int torrent_set_int_setting(int torrentId, int tag, int value);
 

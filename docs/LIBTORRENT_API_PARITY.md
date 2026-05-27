@@ -108,6 +108,9 @@ Legend:
   - `connectPeer(address, port)`
 - Data extraction:
   - download queue, peer info, file progress, file status, file entries
+- File placement:
+  - whole-torrent `move_storage`
+  - per-file `rename_file`
 - Progress callback bridge:
   - `listenProgress(...)` through C callback + polling
 
@@ -281,7 +284,7 @@ Legend:
 ### Migrated
 
 - `torrent_status` and `session_status` are bridged with substantial field coverage in native structs + Dart models.
-- Add-torrent behavior is supported via tag-item pattern and helper methods (`addTorrentFile`, `addTorrentData`, `addTorrentFromTags`).
+- Add-torrent behavior is supported via tag-item pattern and helper methods (`addTorrentFile`, `addTorrentData`, `addTorrentFromTags`), including `renamed_files`-style per-file path overrides.
 
 ### Partially migrated
 
