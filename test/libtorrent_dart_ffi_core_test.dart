@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:ffi';
 import 'dart:io';
 
@@ -14,6 +15,22 @@ void _noopProgress(
 ) {}
 
 void main() {
+  test('int8ArrayToString decodes signed UTF-8 byte arrays', () {
+    const filename = '01 千年の呪い.flac';
+    final bytes = utf8.encode(filename);
+    final native = calloc<ffi.LtTorrentFileInfoNative>();
+    try {
+      for (var i = 0; i < bytes.length; i++) {
+        native.ref.name[i] = bytes[i].toSigned(8);
+      }
+      native.ref.name[bytes.length] = 0;
+
+      expect(ffi.int8ArrayToString(native.ref.name, 256), equals(filename));
+    } finally {
+      calloc.free(native);
+    }
+  });
+
   test('raw ffi core APIs and new session controls are callable', () {
     ffi.lt_clear_error();
     final initialErr = calloc<ffi.LtErrorNative>();

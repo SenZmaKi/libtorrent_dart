@@ -1,11 +1,11 @@
 part of '../libtorrent_dart_ffi.dart';
 
 String int8ArrayToString(Array<Int8> array, int length) {
-  final codeUnits = <int>[];
+  final bytes = <int>[];
   for (var i = 0; i < length; i++) {
     final value = array[i];
     if (value == 0) break;
-    codeUnits.add(value);
+    bytes.add(value.toUnsigned(8));
   }
-  return String.fromCharCodes(codeUnits);
+  return utf8.decode(bytes, allowMalformed: true);
 }

@@ -2,6 +2,7 @@
 @DefaultAsset('package:libtorrent_dart/src/libtorrent_dart.dart')
 library;
 
+import 'dart:convert';
 import 'dart:ffi';
 
 part 'ffi/native_functions.dart';
