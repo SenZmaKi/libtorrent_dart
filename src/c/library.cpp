@@ -1396,7 +1396,7 @@ TORRENT_EXPORT int session_get_status(void *sesptr, struct session_status *s,
 
   s->dht_nodes = ss.dht_nodes;
   s->dht_node_cache = ss.dht_node_cache;
-  s->dht_torrents = ss.dht_torrents;
+  s->dht_torrents = std::max(0, ss.dht_torrents);
   s->dht_global_nodes = ss.dht_global_nodes;
   return 0;
 }
