@@ -134,6 +134,17 @@ int set_int_value(void *dst, int *size, int val) {
   return 0;
 }
 
+int set_string_value(void *dst, int *size, std::string const &val) {
+  int const required = static_cast<int>(val.size()) + 1;
+  if (*size < required) {
+    *size = required;
+    return -2;
+  }
+  std::memcpy(dst, val.c_str(), static_cast<std::size_t>(required));
+  *size = required;
+  return 0;
+}
+
 void clear_last_error();
 void set_last_error(int code, char const *message);
 void set_last_error(int code, std::string const &message);
@@ -1227,14 +1238,7 @@ TORRENT_EXPORT int session_set_settings(void *ses, int tag, ...) {
       tag = va_arg(lp, int);
     }
     va_end(lp);
-    if (pack.has_val(settings_pack::alert_mask) ||
-        pack.has_val(settings_pack::upload_rate_limit) ||
-        pack.has_val(settings_pack::download_rate_limit) ||
-        pack.has_val(settings_pack::connections_limit) ||
-        pack.has_val(settings_pack::unchoke_slots_limit) ||
-        pack.has_val(settings_pack::proxy_type)) {
-      s->apply_settings(pack);
-    }
+    s->apply_settings(pack);
     return 0;
   } catch (std::exception const &e) {
     set_last_error(-1, e.what());
@@ -1257,7 +1261,6 @@ TORRENT_EXPORT int session_get_setting(void *ses, int tag, void *value,
 
   lt::settings_pack pack = s->get_settings();
   int setting = -1;
-  int result = 0;
 
   switch (tag) {
   case SET_UPLOAD_RATE_LIMIT:
@@ -1282,11 +1285,19 @@ TORRENT_EXPORT int session_get_setting(void *ses, int tag, void *value,
     setting = settings_pack::half_open_limit;
     break;
   default:
-    return -2;
+    switch (tag & settings_pack::type_mask) {
+    case settings_pack::int_type_base:
+      return set_int_value(value, value_size, pack.get_int(tag));
+    case settings_pack::bool_type_base:
+      return set_int_value(value, value_size, pack.get_bool(tag) ? 1 : 0);
+    case settings_pack::string_type_base:
+      return set_string_value(value, value_size, pack.get_str(tag));
+    default:
+      return -2;
+    }
   }
 
-  result = pack.get_int(setting);
-  return set_int_value(value, value_size, result);
+  return set_int_value(value, value_size, pack.get_int(setting));
 }
 
 TORRENT_EXPORT int session_set_int_setting(void *ses, int tag_type, int tag,

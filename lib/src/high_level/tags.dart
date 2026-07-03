@@ -3,17 +3,35 @@ part of '../libtorrent_dart.dart';
 class LibtorrentSettingsTag {
   LibtorrentSettingsTag._();
 
-  static const int uploadRateLimit = 0x4000 + 54;
-  static const int downloadRateLimit = 0x4000 + 55;
-  static const int connectionsLimit = 0x4000 + 97;
-  static const int unchokeSlotsLimit = 0x4000 + 73;
+  static const int listenInterfaces = 0x0000 + 5;
+  static const int proxyHostname = 0x0000 + 6;
+  static const int proxyUsername = 0x0000 + 7;
+  static const int proxyPassword = 0x0000 + 8;
+
+  static const int activeDownloads = 0x4000 + 41;
+  static const int activeSeeds = 0x4000 + 42;
+  static const int activeLimit = 0x4000 + 47;
+  static const int seedTimeLimit = 0x4000 + 50;
+  static const int uploadRateLimit = 0x4000 + 78;
+  static const int downloadRateLimit = 0x4000 + 79;
+  static const int dhtUploadRateLimit = 0x4000 + 82;
+  static const int unchokeSlotsLimit = 0x4000 + 83;
+  static const int connectionsLimit = 0x4000 + 85;
+  static const int shareRatioLimit = 0x4000 + 109;
+  static const int seedTimeRatioLimit = 0x4000 + 110;
+  static const int outEncPolicy = 0x4000 + 118;
+  static const int inEncPolicy = 0x4000 + 119;
+  static const int allowedEncLevel = 0x4000 + 120;
+  static const int proxyType = 0x4000 + 123;
+  static const int proxyPort = 0x4000 + 124;
   static const int alertMask = 0x4000 + 260;
 
-  static const int proxyType = 0x4000 + 294;
-  static const int proxyPort = 0x4000 + 295;
-  static const int proxyHostname = 0x0000 + 5;
-  static const int proxyUsername = 0x0000 + 6;
-  static const int proxyPassword = 0x0000 + 7;
+  static const int autoManagePreferSeeds = 0x8000 + 12;
+  static const int enableOutgoingUtp = 0x8000 + 32;
+  static const int enableIncomingUtp = 0x8000 + 33;
+  static const int enableOutgoingTcp = 0x8000 + 34;
+  static const int enableIncomingTcp = 0x8000 + 35;
+  static const int anonymousMode = 0x8000 + 38;
 }
 
 class LibtorrentSettingType {
@@ -90,6 +108,22 @@ class LibtorrentProxyType {
   static const int socks5Password = 3;
   static const int http = 4;
   static const int httpPassword = 5;
+}
+
+class LibtorrentEncryptionPolicy {
+  LibtorrentEncryptionPolicy._();
+
+  static const int forced = 0;
+  static const int enabled = 1;
+  static const int disabled = 2;
+}
+
+class LibtorrentEncryptionLevel {
+  LibtorrentEncryptionLevel._();
+
+  static const int plaintext = 1;
+  static const int rc4 = 2;
+  static const int both = 3;
 }
 
 class LibtorrentAlertCategory {

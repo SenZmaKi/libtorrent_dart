@@ -61,6 +61,167 @@ class TorrentFileInfo {
   final int numFiles;
 }
 
+class SessionConfig {
+  const SessionConfig({
+    this.uploadRateLimit,
+    this.downloadRateLimit,
+    this.connectionsLimit,
+    this.unchokeSlotsLimit,
+    this.activeDownloads,
+    this.activeSeeds,
+    this.activeLimit,
+    this.seedRatioLimit,
+    this.seedTimeLimit,
+    this.seedTimeRatioLimit,
+    this.torrentPort,
+    this.outgoingEncryptionPolicy,
+    this.incomingEncryptionPolicy,
+    this.allowedEncryptionLevel,
+    this.anonymousMode,
+    this.enableIncomingTcp,
+    this.enableIncomingUtp,
+    this.enableOutgoingTcp,
+    this.enableOutgoingUtp,
+    this.autoManagePreferSeeds,
+    this.proxy,
+  });
+
+  final int? uploadRateLimit;
+  final int? downloadRateLimit;
+  final int? connectionsLimit;
+  final int? unchokeSlotsLimit;
+  final int? activeDownloads;
+  final int? activeSeeds;
+  final int? activeLimit;
+  final int? seedRatioLimit;
+  final Duration? seedTimeLimit;
+  final int? seedTimeRatioLimit;
+  final int? torrentPort;
+  final int? outgoingEncryptionPolicy;
+  final int? incomingEncryptionPolicy;
+  final int? allowedEncryptionLevel;
+  final bool? anonymousMode;
+  final bool? enableIncomingTcp;
+  final bool? enableIncomingUtp;
+  final bool? enableOutgoingTcp;
+  final bool? enableOutgoingUtp;
+  final bool? autoManagePreferSeeds;
+  final ProxySetting? proxy;
+
+  List<LibtorrentTagItem> toSettingsItems() {
+    final torrentPort = this.torrentPort;
+    return [
+      if (uploadRateLimit != null)
+        LibtorrentTagItem.settingsInt(
+          LibtorrentSettingsTag.uploadRateLimit,
+          uploadRateLimit!,
+        ),
+      if (downloadRateLimit != null)
+        LibtorrentTagItem.settingsInt(
+          LibtorrentSettingsTag.downloadRateLimit,
+          downloadRateLimit!,
+        ),
+      if (connectionsLimit != null)
+        LibtorrentTagItem.settingsInt(
+          LibtorrentSettingsTag.connectionsLimit,
+          connectionsLimit!,
+        ),
+      if (unchokeSlotsLimit != null)
+        LibtorrentTagItem.settingsInt(
+          LibtorrentSettingsTag.unchokeSlotsLimit,
+          unchokeSlotsLimit!,
+        ),
+      if (activeDownloads != null)
+        LibtorrentTagItem.settingsInt(
+          LibtorrentSettingsTag.activeDownloads,
+          activeDownloads!,
+        ),
+      if (activeSeeds != null)
+        LibtorrentTagItem.settingsInt(
+          LibtorrentSettingsTag.activeSeeds,
+          activeSeeds!,
+        ),
+      if (activeLimit != null)
+        LibtorrentTagItem.settingsInt(
+          LibtorrentSettingsTag.activeLimit,
+          activeLimit!,
+        ),
+      if (seedRatioLimit != null)
+        LibtorrentTagItem.settingsInt(
+          LibtorrentSettingsTag.shareRatioLimit,
+          seedRatioLimit!,
+        ),
+      if (seedTimeLimit != null)
+        LibtorrentTagItem.settingsInt(
+          LibtorrentSettingsTag.seedTimeLimit,
+          seedTimeLimit!.inSeconds,
+        ),
+      if (seedTimeRatioLimit != null)
+        LibtorrentTagItem.settingsInt(
+          LibtorrentSettingsTag.seedTimeRatioLimit,
+          seedTimeRatioLimit!,
+        ),
+      if (torrentPort != null)
+        LibtorrentTagItem.settingsString(
+          LibtorrentSettingsTag.listenInterfaces,
+          SessionConfig.listenInterfacesForPort(torrentPort),
+        ),
+      if (outgoingEncryptionPolicy != null)
+        LibtorrentTagItem.settingsInt(
+          LibtorrentSettingsTag.outEncPolicy,
+          outgoingEncryptionPolicy!,
+        ),
+      if (incomingEncryptionPolicy != null)
+        LibtorrentTagItem.settingsInt(
+          LibtorrentSettingsTag.inEncPolicy,
+          incomingEncryptionPolicy!,
+        ),
+      if (allowedEncryptionLevel != null)
+        LibtorrentTagItem.settingsInt(
+          LibtorrentSettingsTag.allowedEncLevel,
+          allowedEncryptionLevel!,
+        ),
+      if (anonymousMode != null)
+        LibtorrentTagItem.settingsBool(
+          LibtorrentSettingsTag.anonymousMode,
+          anonymousMode!,
+        ),
+      if (enableIncomingTcp != null)
+        LibtorrentTagItem.settingsBool(
+          LibtorrentSettingsTag.enableIncomingTcp,
+          enableIncomingTcp!,
+        ),
+      if (enableIncomingUtp != null)
+        LibtorrentTagItem.settingsBool(
+          LibtorrentSettingsTag.enableIncomingUtp,
+          enableIncomingUtp!,
+        ),
+      if (enableOutgoingTcp != null)
+        LibtorrentTagItem.settingsBool(
+          LibtorrentSettingsTag.enableOutgoingTcp,
+          enableOutgoingTcp!,
+        ),
+      if (enableOutgoingUtp != null)
+        LibtorrentTagItem.settingsBool(
+          LibtorrentSettingsTag.enableOutgoingUtp,
+          enableOutgoingUtp!,
+        ),
+      if (autoManagePreferSeeds != null)
+        LibtorrentTagItem.settingsBool(
+          LibtorrentSettingsTag.autoManagePreferSeeds,
+          autoManagePreferSeeds!,
+        ),
+    ];
+  }
+
+  static String listenInterfacesForPort(int port) {
+    if (port < 0 || port > 65535) {
+      throw RangeError.range(port, 0, 65535, 'port');
+    }
+    return '0.0.0.0:$port,[::]:$port';
+  }
+}
+
 class OpenFileState {
   const OpenFileState({
     required this.fileIndex,

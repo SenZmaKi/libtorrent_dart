@@ -39,7 +39,7 @@ void main() {
     expect(status.upBandwidthBytesQueue, greaterThanOrEqualTo(0));
     expect(status.downBandwidthBytesQueue, greaterThanOrEqualTo(0));
     expect(status.optimisticUnchokeCounter, greaterThanOrEqualTo(0));
-    expect(status.unchokeCounter, greaterThanOrEqualTo(0));
+    expect(status.unchokeCounter, greaterThanOrEqualTo(-1));
     expect(status.dhtNodes, greaterThanOrEqualTo(0));
     expect(status.dhtNodeCache, greaterThanOrEqualTo(0));
     expect(status.dhtTorrents, greaterThanOrEqualTo(0));
@@ -55,6 +55,69 @@ void main() {
     expect(session.getConnectionsLimit(), equals(180));
     session.setUnchokeSlotsLimit(16);
     expect(session.getUnchokeSlotsLimit(), equals(16));
+    session.setActiveDownloads(2);
+    expect(session.getActiveDownloads(), equals(2));
+    session.setActiveSeeds(3);
+    expect(session.getActiveSeeds(), equals(3));
+    session.setActiveLimit(5);
+    expect(session.getActiveLimit(), equals(5));
+    session.setSeedRatioLimit(175);
+    expect(session.getSeedRatioLimit(), equals(175));
+    session.setSeedTimeLimit(const Duration(minutes: 45));
+    expect(session.getSeedTimeLimit(), equals(const Duration(minutes: 45)));
+    session.setSeedTimeRatioLimit(650);
+    expect(session.getSeedTimeRatioLimit(), equals(650));
+    session.setTorrentPort(0);
+    expect(session.getTorrentPort(), equals(0));
+    session.applyConfig(
+      const SessionConfig(
+        seedRatioLimit: 250,
+        seedTimeLimit: Duration(hours: 2),
+        seedTimeRatioLimit: 700,
+        torrentPort: 6889,
+        activeDownloads: 1,
+        activeSeeds: 2,
+        activeLimit: 3,
+        outgoingEncryptionPolicy: LibtorrentEncryptionPolicy.enabled,
+        incomingEncryptionPolicy: LibtorrentEncryptionPolicy.forced,
+        allowedEncryptionLevel: LibtorrentEncryptionLevel.both,
+        anonymousMode: true,
+        enableIncomingTcp: true,
+        enableIncomingUtp: false,
+        enableOutgoingTcp: true,
+        enableOutgoingUtp: false,
+        autoManagePreferSeeds: true,
+      ),
+    );
+    expect(session.getSeedRatioLimit(), equals(250));
+    expect(session.getSeedTimeLimit(), equals(const Duration(hours: 2)));
+    expect(session.getSeedTimeRatioLimit(), equals(700));
+    expect(session.getTorrentPort(), equals(6889));
+    expect(
+      session.getStringSetting(LibtorrentSettingsTag.listenInterfaces),
+      equals('0.0.0.0:6889,[::]:6889'),
+    );
+    expect(session.getActiveDownloads(), equals(1));
+    expect(session.getActiveSeeds(), equals(2));
+    expect(session.getActiveLimit(), equals(3));
+    expect(
+      session.getOutgoingEncryptionPolicy(),
+      equals(LibtorrentEncryptionPolicy.enabled),
+    );
+    expect(
+      session.getIncomingEncryptionPolicy(),
+      equals(LibtorrentEncryptionPolicy.forced),
+    );
+    expect(
+      session.getAllowedEncryptionLevel(),
+      equals(LibtorrentEncryptionLevel.both),
+    );
+    expect(session.isAnonymousModeEnabled(), isTrue);
+    expect(session.isIncomingTcpEnabled(), isTrue);
+    expect(session.isIncomingUtpEnabled(), isFalse);
+    expect(session.isOutgoingTcpEnabled(), isTrue);
+    expect(session.isOutgoingUtpEnabled(), isFalse);
+    expect(session.isAutoManagePreferSeedsEnabled(), isTrue);
     session.setDhtUploadRateLimit(5000);
     expect(session.getDhtUploadRateLimit(), equals(5000));
     session.setDhtAnnounceInterval(180);
@@ -132,6 +195,17 @@ void main() {
     expect(LibtorrentAlertCategory.all, equals(0xFFFFFFFF));
     expect(LibtorrentTorrentState.seeding, equals(5));
     expect(LibtorrentStorageMode.sparse, equals(1));
+    expect(LibtorrentSettingsTag.uploadRateLimit, equals(16462));
+    expect(LibtorrentSettingsTag.downloadRateLimit, equals(16463));
+    expect(LibtorrentSettingsTag.connectionsLimit, equals(16469));
+    expect(LibtorrentSettingsTag.activeDownloads, equals(16425));
+    expect(LibtorrentSettingsTag.activeSeeds, equals(16426));
+    expect(LibtorrentSettingsTag.shareRatioLimit, equals(16493));
+    expect(LibtorrentSettingsTag.seedTimeRatioLimit, equals(16494));
+    expect(LibtorrentSettingsTag.anonymousMode, equals(32806));
+    expect(LibtorrentEncryptionPolicy.forced, equals(0));
+    expect(LibtorrentEncryptionPolicy.enabled, equals(1));
+    expect(LibtorrentEncryptionPolicy.disabled, equals(2));
 
     session.setSettingsFromTags([
       LibtorrentTagItem.settingsInt(

@@ -892,6 +892,125 @@ class Session {
     'Failed to set unchoke slots limit',
   );
 
+  int getActiveDownloads() =>
+      getIntSetting(LibtorrentSettingsTag.activeDownloads);
+
+  void setActiveDownloads(int value) {
+    setIntSetting(LibtorrentSettingsTag.activeDownloads, value);
+  }
+
+  int getActiveSeeds() => getIntSetting(LibtorrentSettingsTag.activeSeeds);
+
+  void setActiveSeeds(int value) {
+    setIntSetting(LibtorrentSettingsTag.activeSeeds, value);
+  }
+
+  int getActiveLimit() => getIntSetting(LibtorrentSettingsTag.activeLimit);
+
+  void setActiveLimit(int value) {
+    setIntSetting(LibtorrentSettingsTag.activeLimit, value);
+  }
+
+  int getSeedRatioLimit() =>
+      getIntSetting(LibtorrentSettingsTag.shareRatioLimit);
+
+  void setSeedRatioLimit(int value) {
+    setIntSetting(LibtorrentSettingsTag.shareRatioLimit, value);
+  }
+
+  Duration getSeedTimeLimit() =>
+      Duration(seconds: getIntSetting(LibtorrentSettingsTag.seedTimeLimit));
+
+  void setSeedTimeLimit(Duration value) {
+    setIntSetting(LibtorrentSettingsTag.seedTimeLimit, value.inSeconds);
+  }
+
+  int getSeedTimeRatioLimit() =>
+      getIntSetting(LibtorrentSettingsTag.seedTimeRatioLimit);
+
+  void setSeedTimeRatioLimit(int value) {
+    setIntSetting(LibtorrentSettingsTag.seedTimeRatioLimit, value);
+  }
+
+  int getTorrentPort() {
+    final interfaces = getStringSetting(LibtorrentSettingsTag.listenInterfaces);
+    final match = RegExp(r':(\d+)(?:[a-z]*)?(?:,|$)').firstMatch(interfaces);
+    if (match == null) {
+      return 0;
+    }
+    return int.parse(match.group(1)!);
+  }
+
+  void setTorrentPort(int port) {
+    setStringSetting(
+      LibtorrentSettingsTag.listenInterfaces,
+      SessionConfig.listenInterfacesForPort(port),
+    );
+  }
+
+  int getOutgoingEncryptionPolicy() =>
+      getIntSetting(LibtorrentSettingsTag.outEncPolicy);
+
+  void setOutgoingEncryptionPolicy(int value) {
+    setIntSetting(LibtorrentSettingsTag.outEncPolicy, value);
+  }
+
+  int getIncomingEncryptionPolicy() =>
+      getIntSetting(LibtorrentSettingsTag.inEncPolicy);
+
+  void setIncomingEncryptionPolicy(int value) {
+    setIntSetting(LibtorrentSettingsTag.inEncPolicy, value);
+  }
+
+  int getAllowedEncryptionLevel() =>
+      getIntSetting(LibtorrentSettingsTag.allowedEncLevel);
+
+  void setAllowedEncryptionLevel(int value) {
+    setIntSetting(LibtorrentSettingsTag.allowedEncLevel, value);
+  }
+
+  bool isAnonymousModeEnabled() =>
+      getBoolSetting(LibtorrentSettingsTag.anonymousMode);
+
+  void setAnonymousModeEnabled(bool enabled) {
+    setBoolSetting(LibtorrentSettingsTag.anonymousMode, enabled);
+  }
+
+  bool isIncomingTcpEnabled() =>
+      getBoolSetting(LibtorrentSettingsTag.enableIncomingTcp);
+
+  void setIncomingTcpEnabled(bool enabled) {
+    setBoolSetting(LibtorrentSettingsTag.enableIncomingTcp, enabled);
+  }
+
+  bool isIncomingUtpEnabled() =>
+      getBoolSetting(LibtorrentSettingsTag.enableIncomingUtp);
+
+  void setIncomingUtpEnabled(bool enabled) {
+    setBoolSetting(LibtorrentSettingsTag.enableIncomingUtp, enabled);
+  }
+
+  bool isOutgoingTcpEnabled() =>
+      getBoolSetting(LibtorrentSettingsTag.enableOutgoingTcp);
+
+  void setOutgoingTcpEnabled(bool enabled) {
+    setBoolSetting(LibtorrentSettingsTag.enableOutgoingTcp, enabled);
+  }
+
+  bool isOutgoingUtpEnabled() =>
+      getBoolSetting(LibtorrentSettingsTag.enableOutgoingUtp);
+
+  void setOutgoingUtpEnabled(bool enabled) {
+    setBoolSetting(LibtorrentSettingsTag.enableOutgoingUtp, enabled);
+  }
+
+  bool isAutoManagePreferSeedsEnabled() =>
+      getBoolSetting(LibtorrentSettingsTag.autoManagePreferSeeds);
+
+  void setAutoManagePreferSeedsEnabled(bool enabled) {
+    setBoolSetting(LibtorrentSettingsTag.autoManagePreferSeeds, enabled);
+  }
+
   int getDhtUploadRateLimit() => _readSessionIntValue(
     ffi.session_get_dht_upload_rate_limit,
     'Failed to read DHT upload rate limit',
@@ -1081,6 +1200,17 @@ class Session {
 
   void applySettingsFromTags(List<LibtorrentTagItem> items) {
     setSettingsFromTags(items);
+  }
+
+  void applyConfig(SessionConfig config) {
+    final items = config.toSettingsItems();
+    if (items.isNotEmpty) {
+      setSettingsFromTags(items);
+    }
+    final proxy = config.proxy;
+    if (proxy != null) {
+      setProxy(proxy);
+    }
   }
 
   void setProxy(ProxySetting setting) {
