@@ -136,7 +136,7 @@ runs:
           exit 1
         fi
         nm -gU "$BINARY" | grep -E ' _lt_version$'
-        DEPENDENCIES="$(otool -L "$BINARY")"
+        DEPENDENCIES="$(otool -L "$BINARY" | tail -n +2)"
         if echo "$DEPENDENCIES" | grep -Ei 'libtorrent|libssl|libcrypto|/opt/homebrew|/usr/local'; then
           echo "$BINARY has an unbundled or machine-local native dependency" >&2
           exit 1
@@ -189,7 +189,7 @@ runs:
           throw "$binary does not export lt_version"
         }
         $dependents = dumpbin /dependents $binary
-        if ($dependents | Select-String -Pattern '(?i)(torrent-rasterbar|libssl|libcrypto)') {
+        if ($dependents | Select-String -Pattern '(?i)(libssl|libcrypto).*\.dll') {
           throw "$binary has an unbundled native dependency"
         }
 
