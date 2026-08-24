@@ -8,7 +8,7 @@ runs:
       uses: dart-lang/setup-dart@v1
 
     - name: Cache Dart packages
-      uses: actions/cache@v4
+      uses: actions/cache@v6
       with:
         path: |
           ~/.pub-cache
@@ -53,7 +53,7 @@ runs:
 
     - name: ccache Storage (Linux/macOS)
       if: runner.os != 'Windows'
-      uses: actions/cache@v4
+      uses: actions/cache@v6
       with:
         path: ~/.cache/ccache
         key: ${{ runner.os }}-ccache-${{ github.sha }}
@@ -62,7 +62,7 @@ runs:
 
     - name: ccache Storage (Windows)
       if: runner.os == 'Windows'
-      uses: actions/cache@v4
+      uses: actions/cache@v6
       with:
         path: ~\AppData\Local\ccache
         key: ${{ runner.os }}-ccache-${{ github.sha }}
@@ -112,7 +112,7 @@ runs:
 
     - name: Cache Windows OpenSSL static libs
       if: runner.os == 'Windows'
-      uses: actions/cache@v4
+      uses: actions/cache@v6
       with:
         path: thirdparty/openssl-windows
         key: Windows-${{ runner.arch }}-openssl-3.4.1-mt

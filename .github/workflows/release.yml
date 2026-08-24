@@ -18,14 +18,14 @@ jobs:
     runs-on: ${{ matrix.runner }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           submodules: recursive
 
       - uses: ./.github/actions/build-native
 
       - name: Upload release binary
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: linux-${{ matrix.architecture }}-binary
           path: binaries/linux/*/${{ matrix.architecture }}/libtorrent-rasterbar.so
@@ -41,14 +41,14 @@ jobs:
     runs-on: ${{ matrix.runner }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           submodules: recursive
 
       - uses: ./.github/actions/build-native
 
       - name: Upload release binary
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: macos-${{ matrix.architecture }}-binary
           path: binaries/macos/*/${{ matrix.architecture }}/libtorrent-rasterbar.dylib
@@ -64,14 +64,14 @@ jobs:
     runs-on: ${{ matrix.runner }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           submodules: recursive
 
       - uses: ./.github/actions/build-native
 
       - name: Upload release binary
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: windows-${{ matrix.architecture }}-binary
           path: binaries/windows/*/${{ matrix.architecture }}/torrent-rasterbar.dll
@@ -87,7 +87,7 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           submodules: recursive
 
@@ -97,7 +97,7 @@ jobs:
           preset: ${{ matrix.preset }}
 
       - name: Upload Android binary
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: android-${{ matrix.abi }}-binary
           path: binaries/android/*/${{ matrix.abi }}/libtorrent-rasterbar.so
@@ -106,7 +106,7 @@ jobs:
     runs-on: macos-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           submodules: recursive
 
@@ -116,7 +116,7 @@ jobs:
           brew install cmake ninja ccache boost openssl@3
 
       - name: ccache Storage
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ~/.cache/ccache
           key: iOS-ccache-${{ github.sha }}
@@ -133,7 +133,7 @@ jobs:
           cmake --build --preset ios --parallel
 
       - name: Upload iOS binary
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ios-binary
           path: binaries/ios/*/Release/libtorrent-rasterbar.a
@@ -146,10 +146,10 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Download build artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           path: release-assets
 

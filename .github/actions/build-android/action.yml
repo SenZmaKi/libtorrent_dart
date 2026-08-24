@@ -32,7 +32,7 @@ runs:
 
     - name: Cache static OpenSSL
       id: openssl-cache
-      uses: actions/cache@v4
+      uses: actions/cache@v6
       with:
         path: thirdparty/openssl-android/${{ inputs.abi }}
         key: android-openssl-3.4.1-ndk26-${{ inputs.abi }}
@@ -43,7 +43,7 @@ runs:
       run: bash scripts/build_openssl_android.sh 3.4.1 "${{ inputs.abi }}"
 
     - name: Cache ccache output
-      uses: actions/cache@v4
+      uses: actions/cache@v6
       with:
         path: ~/.cache/ccache
         key: Android-${{ inputs.abi }}-ccache-${{ github.sha }}
