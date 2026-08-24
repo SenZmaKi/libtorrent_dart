@@ -134,9 +134,39 @@ if(NOT LTD_BINARY_LAYOUT_VERSION STREQUAL "")
 endif()
 
 if(IOS)
+  find_program(LTD_XCRUN xcrun REQUIRED)
+
+  set(_ltd_ios_output_dir
+    "${LTD_OUTPUT_DIR}/ios${_ltd_version_suffix}/Release")
+  set(_ltd_ios_archive
+    "${_ltd_ios_output_dir}/libtorrent-rasterbar.a")
+
+  # A static library does not absorb static libraries passed to
+  # target_link_libraries(). Keep the wrapper as an intermediate archive and
+  # explicitly combine it with libtorrent so consumers receive one complete
+  # native asset.
   set_target_properties(libtorrent_dart PROPERTIES
-    ARCHIVE_OUTPUT_DIRECTORY "${LTD_OUTPUT_DIR}/ios${_ltd_version_suffix}"
+    ARCHIVE_OUTPUT_DIRECTORY_RELEASE
+      "${CMAKE_CURRENT_BINARY_DIR}/ios-wrapper"
+    OUTPUT_NAME libtorrent-dart-wrapper
   )
+  set_target_properties(torrent-rasterbar PROPERTIES
+    ARCHIVE_OUTPUT_DIRECTORY_RELEASE
+      "${CMAKE_CURRENT_BINARY_DIR}/ios-libtorrent"
+  )
+
+  add_custom_command(
+    OUTPUT "${_ltd_ios_archive}"
+    COMMAND "${CMAKE_COMMAND}" -E make_directory "${_ltd_ios_output_dir}"
+    COMMAND "${LTD_XCRUN}" libtool -static -o "${_ltd_ios_archive}"
+      "$<TARGET_FILE:libtorrent_dart>"
+      "$<TARGET_FILE:torrent-rasterbar>"
+    DEPENDS libtorrent_dart torrent-rasterbar
+    COMMENT "Combining the Dart wrapper and libtorrent into the iOS archive"
+    VERBATIM
+  )
+  add_custom_target(libtorrent_dart_ios_bundle ALL
+    DEPENDS "${_ltd_ios_archive}")
 elseif(APPLE)
   if(CMAKE_OSX_ARCHITECTURES STREQUAL "arm64")
     set(_ltd_macos_architecture "arm64")

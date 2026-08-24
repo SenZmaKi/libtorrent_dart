@@ -1,3 +1,9 @@
+## 0.4.4
+
+- Package the Dart wrapper and libtorrent object files together in the iOS
+  static archive instead of publishing the thin wrapper archive by itself.
+- Link the iOS archive into the Flutter example during CI before publishing it.
+
 ## 0.4.3
 
 - Fix pub.dev validation by excluding tracked libtorrent submodule sources from

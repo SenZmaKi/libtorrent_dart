@@ -66,3 +66,13 @@ jobs:
         with:
           abi: ${{ matrix.abi }}
           preset: ${{ matrix.preset }}
+
+  build-ios:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          submodules: recursive
+
+      - uses: ./.github/actions/build-ios
