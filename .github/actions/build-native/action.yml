@@ -28,8 +28,7 @@ runs:
       if: runner.os == 'macOS'
       shell: bash
       run: |
-        brew update
-        brew install cmake ninja ccache boost openssl@3
+        HOMEBREW_NO_AUTO_UPDATE=1 brew install cmake ninja ccache boost openssl@3
 
     - name: Install Windows dependencies
       if: runner.os == 'Windows'

@@ -112,8 +112,7 @@ jobs:
 
       - name: Install macOS dependencies
         run: |
-          brew update
-          brew install cmake ninja ccache boost openssl@3
+          HOMEBREW_NO_AUTO_UPDATE=1 brew install cmake ninja ccache boost openssl@3
 
       - name: ccache Storage
         uses: actions/cache@v6
