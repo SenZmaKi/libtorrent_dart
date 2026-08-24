@@ -55,6 +55,7 @@ runs:
       run: |
         ccache --set-config=max_size=1G
         ccache --set-config=compression=true
+        ccache --set-config=compiler_check=content
         ccache --zero-stats
 
     - name: Configure and build

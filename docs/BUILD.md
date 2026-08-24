@@ -228,10 +228,12 @@ action; host Dart tests cannot load Android ELF binaries.
 Native and Android jobs share architecture-scoped caches between the Tests and
 Release workflows. Dart package downloads are keyed by platform, architecture,
 and `pubspec.yaml`; ccache entries are compressed, capped at 1 GiB per target,
-and keyed by commit with an architecture-specific restore prefix. Android and
-Windows OpenSSL archives are keyed by OpenSSL/toolchain target and the build
-script hash. The iOS Xcode-generator build intentionally has no ccache entry:
-CMake compiler launchers only apply to Makefile and Ninja generators.
+and keyed by commit with an architecture-specific restore prefix. Android
+identifies the freshly installed NDK compiler by content instead of timestamp,
+so equivalent toolchain installs can reuse compiler results. Android and Windows
+OpenSSL archives are keyed by OpenSSL/toolchain target and the build script hash.
+The iOS Xcode-generator build intentionally has no ccache entry: CMake compiler
+launchers only apply to Makefile and Ninja generators.
 
 ### Release workflow (`.github/workflows/release.yml`)
 
