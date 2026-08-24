@@ -2,6 +2,8 @@
 
 - Fix pub.dev validation by excluding tracked libtorrent submodule sources from
   the repository's broad CMake ignore rules.
+- Publish through a warning-aware OIDC job without installing Flutter for this
+  pure Dart package.
 
 ## 0.4.2
 
