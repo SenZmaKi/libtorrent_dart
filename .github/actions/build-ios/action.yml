@@ -39,7 +39,7 @@ runs:
           echo "$ARCHIVE is not a complete libtorrent archive" >&2
           exit 1
         fi
-        lipo -verify_arch arm64 "$ARCHIVE"
+        lipo "$ARCHIVE" -verify_arch arm64
 
         SDK_PATH="$(xcrun --sdk iphoneos --show-sdk-path)"
         xcrun --sdk iphoneos clang++ \
