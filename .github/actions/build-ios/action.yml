@@ -59,13 +59,15 @@ runs:
       working-directory: mobile_test
       run: |
         flutter pub get
-        flutter build ios --release --no-codesign --config-only
-        xcodebuild \
-          -workspace ios/Runner.xcworkspace \
-          -scheme Runner \
-          -configuration Release \
-          -sdk iphoneos \
-          -destination 'generic/platform=iOS' \
-          CODE_SIGNING_ALLOWED=NO \
-          CODE_SIGNING_REQUIRED=NO \
-          build
+        set +e
+        flutter build ios --release --no-codesign
+        FLUTTER_STATUS=$?
+        set -e
+
+        APP_BINARY="build/ios/iphoneos/Runner.app/Runner"
+        if [ ! -f "$APP_BINARY" ]; then
+          echo "Flutter iOS build failed before producing an app binary" >&2
+          exit "$FLUTTER_STATUS"
+        fi
+        file "$APP_BINARY" | grep -q 'arm64'
+        nm "$APP_BINARY" | grep -q ' _lt_version$'
