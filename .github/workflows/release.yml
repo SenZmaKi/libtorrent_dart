@@ -112,6 +112,9 @@ jobs:
 
       - name: Install macOS dependencies
         run: |
+          if brew tap | grep -qx 'aws/tap'; then
+            brew untap aws/tap
+          fi
           HOMEBREW_NO_AUTO_UPDATE=1 brew install cmake ninja ccache boost openssl@3
 
       - name: ccache Storage
