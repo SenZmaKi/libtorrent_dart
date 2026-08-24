@@ -59,3 +59,8 @@ thirdparty/openssl-windows/
 
 # Logs
 *.log
+
+# The libtorrent source is a tracked submodule. Broad CMake ignore rules above
+# must not classify its committed sources as ignored during pub validation.
+!thirdparty/libtorrent/
+!thirdparty/libtorrent/**

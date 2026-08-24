@@ -1,3 +1,8 @@
+## 0.4.3
+
+- Fix pub.dev validation by excluding tracked libtorrent submodule sources from
+  the repository's broad CMake ignore rules.
+
 ## 0.4.2
 
 - Replace the generated Flutter counter app with a working magnet download
