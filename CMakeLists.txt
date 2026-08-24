@@ -137,7 +137,7 @@ if(IOS)
   find_program(LTD_XCRUN xcrun REQUIRED)
 
   set(_ltd_ios_output_dir
-    "${LTD_OUTPUT_DIR}/ios${_ltd_version_suffix}/Release")
+    "${LTD_OUTPUT_DIR}/ios${_ltd_version_suffix}")
   set(_ltd_ios_archive
     "${_ltd_ios_output_dir}/libtorrent-rasterbar.a")
 

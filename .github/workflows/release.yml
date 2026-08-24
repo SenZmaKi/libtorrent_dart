@@ -116,7 +116,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: ios-binary
-          path: binaries/ios/*/Release/libtorrent-rasterbar.a
+          path: binaries/ios/*/libtorrent-rasterbar.a
 
   publish-release:
     runs-on: ubuntu-latest

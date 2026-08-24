@@ -32,7 +32,7 @@ runs:
       shell: bash
       run: |
         VERSION="$(grep -E '^version:' pubspec.yaml | awk '{print $2}')"
-        ARCHIVE="binaries/ios/$VERSION/Release/libtorrent-rasterbar.a"
+        ARCHIVE="binaries/ios/$VERSION/libtorrent-rasterbar.a"
         MEMBER_COUNT="$(ar -t "$ARCHIVE" | wc -l | tr -d ' ')"
         ARCHIVE_SIZE="$(stat -f '%z' "$ARCHIVE")"
         if [ "$MEMBER_COUNT" -le 2 ] || [ "$ARCHIVE_SIZE" -le 1000000 ]; then
