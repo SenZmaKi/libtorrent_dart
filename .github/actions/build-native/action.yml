@@ -55,11 +55,20 @@ runs:
       with:
         arch: ${{ runner.arch == 'ARM64' && 'arm64' || 'amd64' }}
 
-    - name: ccache Storage (Linux/macOS)
-      if: runner.os != 'Windows'
+    - name: ccache Storage (Linux)
+      if: runner.os == 'Linux'
       uses: actions/cache@v6
       with:
         path: ~/.cache/ccache
+        key: ccache-v1-${{ runner.os }}-${{ runner.arch }}-${{ github.sha }}
+        restore-keys: |
+          ccache-v1-${{ runner.os }}-${{ runner.arch }}-
+
+    - name: ccache Storage (macOS)
+      if: runner.os == 'macOS'
+      uses: actions/cache@v6
+      with:
+        path: ~/Library/Caches/ccache
         key: ccache-v1-${{ runner.os }}-${{ runner.arch }}-${{ github.sha }}
         restore-keys: |
           ccache-v1-${{ runner.os }}-${{ runner.arch }}-
