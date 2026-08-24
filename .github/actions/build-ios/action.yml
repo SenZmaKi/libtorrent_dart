@@ -59,4 +59,13 @@ runs:
       working-directory: mobile_test
       run: |
         flutter pub get
-        flutter build ios --release --no-codesign
+        flutter build ios --release --no-codesign --config-only
+        xcodebuild \
+          -workspace ios/Runner.xcworkspace \
+          -scheme Runner \
+          -configuration Release \
+          -sdk iphoneos \
+          -destination 'generic/platform=iOS' \
+          CODE_SIGNING_ALLOWED=NO \
+          CODE_SIGNING_REQUIRED=NO \
+          build
