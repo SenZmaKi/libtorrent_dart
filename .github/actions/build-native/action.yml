@@ -136,7 +136,9 @@ runs:
           exit 1
         fi
         nm -gU "$BINARY" | grep -E ' _lt_version$'
-        DEPENDENCIES="$(otool -L "$BINARY" | tail -n +2)"
+        # A dylib's first indented entry is its own install name, not a
+        # dependency. Validate only the entries after it.
+        DEPENDENCIES="$(otool -L "$BINARY" | tail -n +3)"
         if echo "$DEPENDENCIES" | grep -Ei 'libtorrent|libssl|libcrypto|/opt/homebrew|/usr/local'; then
           echo "$BINARY has an unbundled or machine-local native dependency" >&2
           exit 1
