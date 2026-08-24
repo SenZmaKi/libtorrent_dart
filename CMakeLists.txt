@@ -24,6 +24,8 @@ set(LTD_OUTPUT_DIR "${CMAKE_CURRENT_LIST_DIR}/binaries" CACHE PATH
   "Root directory where platform-specific prebuilt libraries are placed")
 set(LTD_BINARY_LAYOUT_VERSION "" CACHE STRING
   "Optional version segment under each platform output directory")
+set(LTD_TARGET_ARCHITECTURE "" CACHE STRING
+  "Architecture segment used for architecture-specific release binaries")
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Boost headers
@@ -151,19 +153,32 @@ elseif(APPLE)
       "${LTD_OUTPUT_DIR}/macos${_ltd_version_suffix}/${_ltd_macos_architecture}"
   )
 elseif(ANDROID)
+  if(LTD_TARGET_ARCHITECTURE STREQUAL "")
+    message(FATAL_ERROR "Set LTD_TARGET_ARCHITECTURE for Android builds.")
+  endif()
   set_target_properties(libtorrent_dart PROPERTIES
-    LIBRARY_OUTPUT_DIRECTORY "${LTD_OUTPUT_DIR}/android${_ltd_version_suffix}"
+    LIBRARY_OUTPUT_DIRECTORY
+      "${LTD_OUTPUT_DIR}/android${_ltd_version_suffix}/${LTD_TARGET_ARCHITECTURE}"
   )
 elseif(WIN32)
+  if(LTD_TARGET_ARCHITECTURE STREQUAL "")
+    message(FATAL_ERROR "Set LTD_TARGET_ARCHITECTURE for Windows builds.")
+  endif()
   set_target_properties(libtorrent_dart PROPERTIES
-    RUNTIME_OUTPUT_DIRECTORY "${LTD_OUTPUT_DIR}/windows${_ltd_version_suffix}"
-    ARCHIVE_OUTPUT_DIRECTORY "${LTD_OUTPUT_DIR}/windows${_ltd_version_suffix}"
+    RUNTIME_OUTPUT_DIRECTORY
+      "${LTD_OUTPUT_DIR}/windows${_ltd_version_suffix}/${LTD_TARGET_ARCHITECTURE}"
+    ARCHIVE_OUTPUT_DIRECTORY
+      "${LTD_OUTPUT_DIR}/windows${_ltd_version_suffix}/${LTD_TARGET_ARCHITECTURE}"
     OUTPUT_NAME torrent-rasterbar
   )
 else()
   # Linux / other POSIX
+  if(LTD_TARGET_ARCHITECTURE STREQUAL "")
+    message(FATAL_ERROR "Set LTD_TARGET_ARCHITECTURE for Linux builds.")
+  endif()
   set_target_properties(libtorrent_dart PROPERTIES
-    LIBRARY_OUTPUT_DIRECTORY "${LTD_OUTPUT_DIR}/linux${_ltd_version_suffix}"
+    LIBRARY_OUTPUT_DIRECTORY
+      "${LTD_OUTPUT_DIR}/linux${_ltd_version_suffix}/${LTD_TARGET_ARCHITECTURE}"
   )
 endif()
 

@@ -42,7 +42,6 @@ runs:
         if (-not $boostDir) {
           choco install -y boost-msvc-14.3 --no-progress --limit-output --execution-timeout=1200
         }
-        choco install ccache -y --no-progress
         cmake --version
         ninja --version
 
@@ -50,7 +49,7 @@ runs:
       if: runner.os == 'Windows'
       uses: ilammy/msvc-dev-cmd@v1
       with:
-        arch: amd64
+        arch: ${{ runner.arch == 'ARM64' && 'arm64' || 'amd64' }}
 
     - name: ccache Storage (Linux/macOS)
       if: runner.os != 'Windows'
@@ -75,8 +74,16 @@ runs:
       shell: bash
       run: |
         VERSION="$(grep -E '^version:' pubspec.yaml | awk '{print $2}')"
-        cmake --preset linux -DLTD_BINARY_LAYOUT_VERSION="$VERSION"
-        cmake --build --preset linux --parallel
+        case "$(uname -m)" in
+          x86_64) PRESET="linux-x64"; ARCHITECTURE="x64"; ELF_MACHINE="Advanced Micro Devices X86-64" ;;
+          aarch64|arm64) PRESET="linux-arm64"; ARCHITECTURE="arm64"; ELF_MACHINE="AArch64" ;;
+          *) echo "Unsupported Linux architecture: $(uname -m)" >&2; exit 1 ;;
+        esac
+        cmake --preset "$PRESET" -DLTD_BINARY_LAYOUT_VERSION="$VERSION"
+        cmake --build --preset "$PRESET" --parallel
+
+        BINARY="binaries/linux/$VERSION/$ARCHITECTURE/libtorrent-rasterbar.so"
+        readelf -h "$BINARY" | grep -F "Machine:" | grep -F "$ELF_MACHINE"
 
     - name: Configure and build (macOS)
       if: runner.os == 'macOS'
@@ -108,12 +115,15 @@ runs:
       uses: actions/cache@v4
       with:
         path: thirdparty/openssl-windows
-        key: Windows-openssl-3.4.1-mt
+        key: Windows-${{ runner.arch }}-openssl-3.4.1-mt
 
     - name: Build static OpenSSL for Windows
       if: runner.os == 'Windows'
       shell: pwsh
-      run: .\scripts\build_openssl_windows.ps1
+      run: |
+        $ErrorActionPreference = 'Stop'
+        $architecture = if ($env:RUNNER_ARCH -eq 'ARM64') { 'arm64' } else { 'x64' }
+        .\scripts\build_openssl_windows.ps1 -Architecture $architecture
 
     - name: Configure and build (Windows)
       if: runner.os == 'Windows'
@@ -123,15 +133,24 @@ runs:
         $boostDir = Get-ChildItem 'C:\local' -Directory | Where-Object { $_.Name -like 'boost_*' } | Select-Object -First 1
         if (-not $boostDir) { throw 'Boost headers not found under C:\local' }
         $version = (Select-String -Path pubspec.yaml -Pattern '^version:\s*(.+)$').Matches[0].Groups[1].Value.Trim()
-        $OPENSSL_ROOT = "$(Get-Location)\thirdparty\openssl-windows\x64"
-        cmake --preset windows `
+        $architecture = if ($env:RUNNER_ARCH -eq 'ARM64') { 'arm64' } else { 'x64' }
+        $preset = "windows-$architecture"
+        $OPENSSL_ROOT = "$(Get-Location)\thirdparty\openssl-windows\$architecture"
+        cmake --preset $preset `
           -DLTD_BOOST_HEADERS_ROOT="$($boostDir.FullName)" `
           -DLTD_BINARY_LAYOUT_VERSION="$version" `
           -DOPENSSL_ROOT_DIR="$OPENSSL_ROOT" `
           -DOPENSSL_SSL_LIBRARY="$OPENSSL_ROOT\lib\libssl.lib" `
           -DOPENSSL_CRYPTO_LIBRARY="$OPENSSL_ROOT\lib\libcrypto.lib" `
           -DOPENSSL_INCLUDE_DIR="$OPENSSL_ROOT\include"
-        cmake --build --preset windows --parallel
+        cmake --build --preset $preset --parallel
+
+        $binary = "binaries\windows\$version\$architecture\torrent-rasterbar.dll"
+        $machine = if ($architecture -eq 'arm64') { 'ARM64' } else { 'x64' }
+        $headers = dumpbin /headers $binary
+        if (-not ($headers | Select-String -SimpleMatch "machine ($machine)")) {
+          throw "$binary is not a $machine DLL"
+        }
 
     - name: Pub get
       shell: bash

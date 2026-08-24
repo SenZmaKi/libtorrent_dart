@@ -1,32 +1,41 @@
-# Build static OpenSSL for Windows x64 using MSVC with /MT (static runtime).
+# Build static OpenSSL for Windows x64 or arm64 using MSVC with /MT.
 #
 # Produces:
-#   thirdparty/openssl-windows/x64/
+#   thirdparty/openssl-windows/<x64|arm64>/
 #     include/openssl/    (headers)
 #     lib/libssl.lib
 #     lib/libcrypto.lib
 #
 # Requires:
-#   - Visual Studio x64 developer environment (cl.exe, nmake.exe in PATH)
+#   - Visual Studio developer environment for the requested architecture
 #   - Strawberry Perl (checked automatically; installed via choco if missing)
 #   - NASM (checked automatically; installed via choco if missing)
 #
-# Usage (from repo root, in a VS x64 Dev Prompt or after ilammy/msvc-dev-cmd):
+# Usage (from repo root, after activating the matching MSVC environment):
 #   .\scripts\build_openssl_windows.ps1
-#   .\scripts\build_openssl_windows.ps1 -OpenSslVersion 3.4.1 -Force
+#   .\scripts\build_openssl_windows.ps1 -Architecture arm64 -Force
 
 param(
     [string]$OpenSslVersion = "3.4.1",
+    [ValidateSet("x64", "arm64")]
+    [string]$Architecture = "x64",
     [switch]$Force
 )
 
 $ErrorActionPreference = 'Stop'
 
 $repoRoot = Split-Path $PSScriptRoot -Parent
-$outDir = Join-Path $repoRoot "thirdparty\openssl-windows\x64"
+$outDir = Join-Path $repoRoot "thirdparty\openssl-windows\$Architecture"
 $tarball = Join-Path $env:TEMP "openssl-$OpenSslVersion.tar.gz"
 $srcDir = Join-Path $env:TEMP "openssl-$OpenSslVersion"
-$buildDir = Join-Path $env:TEMP "openssl-windows-build"
+$buildDir = Join-Path $env:TEMP "openssl-windows-$Architecture-build"
+$vcvarsArchitecture = if ($Architecture -eq 'arm64') { 'arm64' } else { 'amd64' }
+$vsComponent = if ($Architecture -eq 'arm64') {
+    'Microsoft.VisualStudio.Component.VC.Tools.ARM64'
+} else {
+    'Microsoft.VisualStudio.Component.VC.Tools.x86.x64'
+}
+$opensslTarget = if ($Architecture -eq 'arm64') { 'VC-WIN64-ARM' } else { 'VC-WIN64A' }
 
 # ── Early exit if already built ────────────────────────────────────────────
 if ((Test-Path "$outDir\lib\libssl.lib") -and -not $Force) {
@@ -40,11 +49,14 @@ $needVsEnv = (-not (Get-Command cl.exe -ErrorAction SilentlyContinue)) -or ([str
 if ($needVsEnv) {
     $vsWhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
     if (Test-Path $vsWhere) {
-        $vsPath = & $vsWhere -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath 2>$null
+        $vsPath = & $vsWhere -latest -products * -requires $vsComponent -property installationPath 2>$null
     }
     if (-not $vsPath) {
         # Fallback: common VS 2022 paths
         $vsPath = @(
+            'C:\Program Files\Microsoft Visual Studio\2026\Enterprise',
+            'C:\Program Files\Microsoft Visual Studio\2026\Community',
+            'C:\Program Files\Microsoft Visual Studio\2026\BuildTools',
             'C:\Program Files\Microsoft Visual Studio\2022\Enterprise',
             'C:\Program Files\Microsoft Visual Studio\2022\Professional',
             'C:\Program Files\Microsoft Visual Studio\2022\Community',
@@ -58,8 +70,8 @@ if ($needVsEnv) {
     if (-not (Test-Path $vcvarsall)) {
         throw "vcvarsall.bat not found at $vcvarsall"
     }
-    Write-Host "Activating MSVC x64 environment from $vcvarsall ..."
-    $envLines = cmd /c "`"$vcvarsall`" amd64 > nul 2>&1 && set"
+    Write-Host "Activating MSVC $Architecture environment from $vcvarsall ..."
+    $envLines = cmd /c "`"$vcvarsall`" $vcvarsArchitecture > nul 2>&1 && set"
     $envLines | ForEach-Object {
         if ($_ -match '^([^=]+)=(.*)$') {
             [System.Environment]::SetEnvironmentVariable($matches[1], $matches[2], 'Process')
@@ -109,10 +121,10 @@ Copy-Item $srcDir $buildDir -Recurse -Force
 Push-Location $buildDir
 try {
     Write-Host ""
-    Write-Host "Configuring OpenSSL $OpenSslVersion for VC-WIN64A (/MT, no-shared) ..."
+    Write-Host "Configuring OpenSSL $OpenSslVersion for $opensslTarget (/MT, no-shared) ..."
     # -MT: static MSVC runtime (matches libtorrent's CMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded)
     # no-asm: skip NASM requirement; use C fallbacks (acceptable for functionality, minor perf cost)
-    & $strawberryPerl Configure VC-WIN64A `
+    & $strawberryPerl Configure $opensslTarget `
         no-shared `
         no-tests `
         no-asm `

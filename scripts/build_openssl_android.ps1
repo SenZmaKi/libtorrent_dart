@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-    Cross-compile a static OpenSSL for Android arm64-v8a using the NDK.
+    Cross-compile static OpenSSL for Android arm64-v8a or x86_64 using the NDK.
 
 .DESCRIPTION
     On Windows this script delegates to WSL (Windows Subsystem for Linux) which
@@ -10,7 +10,7 @@
     On Linux / macOS the bash script is invoked directly.
 
     Produces:
-        thirdparty/openssl-android/arm64-v8a/
+        thirdparty/openssl-android/<arm64-v8a|x86_64>/
             include/openssl/   (headers)
             lib/libssl.a
             lib/libcrypto.a
@@ -21,12 +21,17 @@
 .PARAMETER NdkHome
     Path to the NDK root.  Defaults to $env:ANDROID_NDK_HOME.
 
+.PARAMETER Abi
+    Android ABI to build: arm64-v8a or x86_64.
+
 .PARAMETER Force
     Rebuild even if the output already exists.
 #>
 param(
     [string]$OpenSslVersion = "3.4.1",
     [string]$NdkHome = $env:ANDROID_NDK_HOME,
+    [ValidateSet("arm64-v8a", "x86_64")]
+    [string]$Abi = "arm64-v8a",
     [switch]$Force
 )
 
@@ -34,7 +39,7 @@ $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
 
 $repo = Resolve-Path "$PSScriptRoot\.."
-$outDir = Join-Path $repo "thirdparty\openssl-android\arm64-v8a"
+$outDir = Join-Path $repo "thirdparty\openssl-android\$Abi"
 $shScript = Join-Path $repo "scripts\build_openssl_android.sh"
 
 if ((Test-Path "$outDir\lib\libssl.a") -and -not $Force) {
@@ -80,9 +85,10 @@ $forceArg = if ($Force) { "--force" } else { "" }
 
 Write-Host "Running OpenSSL cross-compile via WSL..."
 Write-Host "  NDK:    $ndkWsl"
-Write-Host "  Output: $repoWsl/thirdparty/openssl-android/arm64-v8a"
+Write-Host "  ABI:     $Abi"
+Write-Host "  Output: $repoWsl/thirdparty/openssl-android/$Abi"
 
-wsl bash -c "ANDROID_NDK_HOME='$ndkWsl' bash '$scriptWsl' '$OpenSslVersion' '$forceArg'"
+wsl bash -c "ANDROID_NDK_HOME='$ndkWsl' bash '$scriptWsl' '$OpenSslVersion' '$Abi' '$forceArg'"
 if ($LASTEXITCODE -ne 0) { throw "OpenSSL build failed (see WSL output above)" }
 
 Write-Host ""

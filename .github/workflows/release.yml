@@ -8,7 +8,14 @@ on:
 
 jobs:
   build-linux:
-    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - architecture: x64
+            runner: ubuntu-24.04
+          - architecture: arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -20,8 +27,8 @@ jobs:
       - name: Upload release binary
         uses: actions/upload-artifact@v4
         with:
-          name: linux-binary
-          path: binaries/linux/*/libtorrent-rasterbar.so
+          name: linux-${{ matrix.architecture }}-binary
+          path: binaries/linux/*/${{ matrix.architecture }}/libtorrent-rasterbar.so
 
   build-macos:
     strategy:
@@ -47,7 +54,14 @@ jobs:
           path: binaries/macos/*/${{ matrix.architecture }}/libtorrent-rasterbar.dylib
 
   build-windows:
-    runs-on: windows-latest
+    strategy:
+      matrix:
+        include:
+          - architecture: x64
+            runner: windows-2025
+          - architecture: arm64
+            runner: windows-11-arm
+    runs-on: ${{ matrix.runner }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -59,79 +73,34 @@ jobs:
       - name: Upload release binary
         uses: actions/upload-artifact@v4
         with:
-          name: windows-binary
-          path: binaries/windows/*/torrent-rasterbar.dll
+          name: windows-${{ matrix.architecture }}-binary
+          path: binaries/windows/*/${{ matrix.architecture }}/torrent-rasterbar.dll
 
   build-android:
-    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - abi: arm64-v8a
+            preset: android-arm64
+          - abi: x86_64
+            preset: android-x64
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           submodules: recursive
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
-
-      - name: Install Android NDK
-        run: |
-          yes | sdkmanager --licenses
-          sdkmanager "ndk;26.3.11579264"
-          echo "ANDROID_NDK_HOME=$ANDROID_SDK_ROOT/ndk/26.3.11579264" >> "$GITHUB_ENV"
-
-      - name: Install build dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y cmake ninja-build ccache libboost-dev
-
-      - name: Cache static OpenSSL (Android arm64)
-        id: openssl-cache
-        uses: actions/cache@v4
+      - uses: ./.github/actions/build-android
         with:
-          path: thirdparty/openssl-android
-          key: android-openssl-3.4.1-ndk26-arm64
-
-      - name: Build static OpenSSL for Android arm64
-        if: steps.openssl-cache.outputs.cache-hit != 'true'
-        run: bash scripts/build_openssl_android.sh
-
-      - name: ccache Storage
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/ccache
-          key: Android-ccache-${{ github.sha }}
-          restore-keys: |
-            Android-ccache-
-
-      - name: Configure and build (Android arm64)
-        run: |
-          test -f /usr/include/boost/version.hpp
-          # Copy Boost to an isolated path: the NDK toolchain adds /usr/include
-          # to CMAKE_CXX_IMPLICIT_INCLUDE_DIRECTORIES so CMake silently strips
-          # it from include_directories().  A non-system path is never filtered.
-          mkdir -p /tmp/boost-include
-          cp -r /usr/include/boost /tmp/boost-include/
-          BOOST_ROOT="/tmp/boost-include"
-          VERSION="$(grep -E '^version:' pubspec.yaml | awk '{print $2}')"
-          OPENSSL_ROOT="$PWD/thirdparty/openssl-android/arm64-v8a"
-          cmake --preset android \
-            -DLTD_BINARY_LAYOUT_VERSION="$VERSION" \
-            -DLTD_BOOST_HEADERS_ROOT="$BOOST_ROOT" \
-            -DBoost_INCLUDE_DIR="$BOOST_ROOT" \
-            -DBoost_INCLUDE_DIRS="$BOOST_ROOT" \
-            -DBOOST_ROOT="$BOOST_ROOT" \
-            -DBOOST_INCLUDEDIR="$BOOST_ROOT" \
-            -DOPENSSL_ROOT_DIR="$OPENSSL_ROOT" \
-            -DOPENSSL_CRYPTO_LIBRARY="$OPENSSL_ROOT/lib/libcrypto.a" \
-            -DOPENSSL_SSL_LIBRARY="$OPENSSL_ROOT/lib/libssl.a" \
-            -DOPENSSL_INCLUDE_DIR="$OPENSSL_ROOT/include"
-          cmake --build --preset android --parallel
+          abi: ${{ matrix.abi }}
+          preset: ${{ matrix.preset }}
 
       - name: Upload Android binary
         uses: actions/upload-artifact@v4
         with:
-          name: android-binary
-          path: binaries/android/*/libtorrent-rasterbar.so
+          name: android-${{ matrix.abi }}-binary
+          path: binaries/android/*/${{ matrix.abi }}/libtorrent-rasterbar.so
 
   build-ios:
     runs-on: macos-latest
@@ -186,23 +155,29 @@ jobs:
 
       - name: Prepare release asset names
         run: |
-          LINUX_LIB="$(find release-assets/linux-binary -type f -name 'libtorrent-rasterbar.so' | head -n 1)"
+          LINUX_X64_LIB="$(find release-assets/linux-x64-binary -type f -name 'libtorrent-rasterbar.so' | head -n 1)"
+          LINUX_ARM64_LIB="$(find release-assets/linux-arm64-binary -type f -name 'libtorrent-rasterbar.so' | head -n 1)"
           MACOS_ARM64_LIB="$(find release-assets/macos-arm64-binary -type f -name 'libtorrent-rasterbar.dylib' | head -n 1)"
           MACOS_X64_LIB="$(find release-assets/macos-x64-binary -type f -name 'libtorrent-rasterbar.dylib' | head -n 1)"
-          WINDOWS_LIB="$(find release-assets/windows-binary -type f -name 'torrent-rasterbar.dll' | head -n 1)"
-          ANDROID_LIB="$(find release-assets/android-binary -type f -name 'libtorrent-rasterbar.so' | head -n 1)"
+          WINDOWS_X64_LIB="$(find release-assets/windows-x64-binary -type f -name 'torrent-rasterbar.dll' | head -n 1)"
+          WINDOWS_ARM64_LIB="$(find release-assets/windows-arm64-binary -type f -name 'torrent-rasterbar.dll' | head -n 1)"
+          ANDROID_ARM64_LIB="$(find release-assets/android-arm64-v8a-binary -type f -name 'libtorrent-rasterbar.so' | head -n 1)"
+          ANDROID_X64_LIB="$(find release-assets/android-x86_64-binary -type f -name 'libtorrent-rasterbar.so' | head -n 1)"
           IOS_LIB="$(find release-assets/ios-binary -type f -name '*.a' | head -n 1)"
 
-          if [ -z "$LINUX_LIB" ] || [ -z "$MACOS_ARM64_LIB" ] || [ -z "$MACOS_X64_LIB" ] || [ -z "$WINDOWS_LIB" ] || [ -z "$ANDROID_LIB" ] || [ -z "$IOS_LIB" ]; then
+          if [ -z "$LINUX_X64_LIB" ] || [ -z "$LINUX_ARM64_LIB" ] || [ -z "$MACOS_ARM64_LIB" ] || [ -z "$MACOS_X64_LIB" ] || [ -z "$WINDOWS_X64_LIB" ] || [ -z "$WINDOWS_ARM64_LIB" ] || [ -z "$ANDROID_ARM64_LIB" ] || [ -z "$ANDROID_X64_LIB" ] || [ -z "$IOS_LIB" ]; then
             echo "One or more release binaries were not found in downloaded artifacts" >&2
             exit 1
           fi
 
-          cp "$LINUX_LIB" release-assets/linux-libtorrent-rasterbar.so
+          cp "$LINUX_X64_LIB" release-assets/linux-x64-libtorrent-rasterbar.so
+          cp "$LINUX_ARM64_LIB" release-assets/linux-arm64-libtorrent-rasterbar.so
           cp "$MACOS_ARM64_LIB" release-assets/macos-arm64-libtorrent-rasterbar.dylib
           cp "$MACOS_X64_LIB" release-assets/macos-x64-libtorrent-rasterbar.dylib
-          cp "$WINDOWS_LIB" release-assets/windows-torrent-rasterbar.dll
-          cp "$ANDROID_LIB" release-assets/android-libtorrent-rasterbar.so
+          cp "$WINDOWS_X64_LIB" release-assets/windows-x64-torrent-rasterbar.dll
+          cp "$WINDOWS_ARM64_LIB" release-assets/windows-arm64-torrent-rasterbar.dll
+          cp "$ANDROID_ARM64_LIB" release-assets/android-arm64-v8a-libtorrent-rasterbar.so
+          cp "$ANDROID_X64_LIB" release-assets/android-x86_64-libtorrent-rasterbar.so
           cp "$IOS_LIB" release-assets/ios-libtorrent-rasterbar.a
 
       - name: Create or update release
@@ -212,20 +187,26 @@ jobs:
         run: |
           if gh release view "$TAG_NAME" >/dev/null 2>&1; then
             gh release upload "$TAG_NAME" \
-              release-assets/linux-libtorrent-rasterbar.so \
+              release-assets/linux-x64-libtorrent-rasterbar.so \
+              release-assets/linux-arm64-libtorrent-rasterbar.so \
               release-assets/macos-arm64-libtorrent-rasterbar.dylib \
               release-assets/macos-x64-libtorrent-rasterbar.dylib \
-              release-assets/windows-torrent-rasterbar.dll \
-              release-assets/android-libtorrent-rasterbar.so \
+              release-assets/windows-x64-torrent-rasterbar.dll \
+              release-assets/windows-arm64-torrent-rasterbar.dll \
+              release-assets/android-arm64-v8a-libtorrent-rasterbar.so \
+              release-assets/android-x86_64-libtorrent-rasterbar.so \
               release-assets/ios-libtorrent-rasterbar.a \
               --clobber
           else
             gh release create "$TAG_NAME" \
-              release-assets/linux-libtorrent-rasterbar.so \
+              release-assets/linux-x64-libtorrent-rasterbar.so \
+              release-assets/linux-arm64-libtorrent-rasterbar.so \
               release-assets/macos-arm64-libtorrent-rasterbar.dylib \
               release-assets/macos-x64-libtorrent-rasterbar.dylib \
-              release-assets/windows-torrent-rasterbar.dll \
-              release-assets/android-libtorrent-rasterbar.so \
+              release-assets/windows-x64-torrent-rasterbar.dll \
+              release-assets/windows-arm64-torrent-rasterbar.dll \
+              release-assets/android-arm64-v8a-libtorrent-rasterbar.so \
+              release-assets/android-x86_64-libtorrent-rasterbar.so \
               release-assets/ios-libtorrent-rasterbar.a \
               --title "$TAG_NAME" \
               --target "${{ github.sha }}" \

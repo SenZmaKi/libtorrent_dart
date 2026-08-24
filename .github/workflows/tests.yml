@@ -9,7 +9,10 @@ on:
 
 jobs:
   build-linux:
-    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        runner: [ubuntu-24.04, ubuntu-24.04-arm]
+    runs-on: ${{ matrix.runner }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -32,7 +35,10 @@ jobs:
       - uses: ./.github/actions/build-native
 
   build-windows:
-    runs-on: windows-latest
+    strategy:
+      matrix:
+        runner: [windows-2025, windows-11-arm]
+    runs-on: ${{ matrix.runner }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -40,3 +46,23 @@ jobs:
           submodules: recursive
 
       - uses: ./.github/actions/build-native
+
+  build-android:
+    strategy:
+      matrix:
+        include:
+          - abi: arm64-v8a
+            preset: android-arm64
+          - abi: x86_64
+            preset: android-x64
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - uses: ./.github/actions/build-android
+        with:
+          abi: ${{ matrix.abi }}
+          preset: ${{ matrix.preset }}

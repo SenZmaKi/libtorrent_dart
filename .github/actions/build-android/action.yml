@@ -1,0 +1,84 @@
+name: "Build Android native binary"
+description: "Builds one architecture-specific Android libtorrent binary"
+
+inputs:
+  abi:
+    description: "Android ABI output directory"
+    required: true
+  preset:
+    description: "CMake configure and build preset"
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Setup Android SDK
+      uses: android-actions/setup-android@v3
+
+    - name: Install Android NDK
+      shell: bash
+      run: |
+        set +o pipefail
+        yes | sdkmanager --licenses
+        set -o pipefail
+        sdkmanager "ndk;26.3.11579264"
+        echo "ANDROID_NDK_HOME=$ANDROID_SDK_ROOT/ndk/26.3.11579264" >> "$GITHUB_ENV"
+
+    - name: Install build dependencies
+      shell: bash
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y cmake ninja-build ccache libboost-dev
+
+    - name: Cache static OpenSSL
+      id: openssl-cache
+      uses: actions/cache@v4
+      with:
+        path: thirdparty/openssl-android/${{ inputs.abi }}
+        key: android-openssl-3.4.1-ndk26-${{ inputs.abi }}
+
+    - name: Build static OpenSSL
+      if: steps.openssl-cache.outputs.cache-hit != 'true'
+      shell: bash
+      run: bash scripts/build_openssl_android.sh 3.4.1 "${{ inputs.abi }}"
+
+    - name: Cache ccache output
+      uses: actions/cache@v4
+      with:
+        path: ~/.cache/ccache
+        key: Android-${{ inputs.abi }}-ccache-${{ github.sha }}
+        restore-keys: |
+          Android-${{ inputs.abi }}-ccache-
+
+    - name: Configure and build
+      shell: bash
+      run: |
+        set -euo pipefail
+        test -f /usr/include/boost/version.hpp
+        mkdir -p /tmp/boost-include
+        cp -r /usr/include/boost /tmp/boost-include/
+        BOOST_ROOT="/tmp/boost-include"
+        VERSION="$(grep -E '^version:' pubspec.yaml | awk '{print $2}')"
+        OPENSSL_ROOT="$PWD/thirdparty/openssl-android/${{ inputs.abi }}"
+
+        cmake --preset "${{ inputs.preset }}" \
+          -DLTD_BINARY_LAYOUT_VERSION="$VERSION" \
+          -DLTD_BOOST_HEADERS_ROOT="$BOOST_ROOT" \
+          -DBoost_INCLUDE_DIR="$BOOST_ROOT" \
+          -DBoost_INCLUDE_DIRS="$BOOST_ROOT" \
+          -DBOOST_ROOT="$BOOST_ROOT" \
+          -DBOOST_INCLUDEDIR="$BOOST_ROOT" \
+          -DOPENSSL_ROOT_DIR="$OPENSSL_ROOT" \
+          -DOPENSSL_CRYPTO_LIBRARY="$OPENSSL_ROOT/lib/libcrypto.a" \
+          -DOPENSSL_SSL_LIBRARY="$OPENSSL_ROOT/lib/libssl.a" \
+          -DOPENSSL_INCLUDE_DIR="$OPENSSL_ROOT/include"
+        cmake --build --preset "${{ inputs.preset }}" --parallel
+
+        BINARY="binaries/android/$VERSION/${{ inputs.abi }}/libtorrent-rasterbar.so"
+        case "${{ inputs.abi }}" in
+          arm64-v8a) ELF_MACHINE="AArch64" ;;
+          x86_64) ELF_MACHINE="Advanced Micro Devices X86-64" ;;
+          *) echo "Unsupported Android ABI: ${{ inputs.abi }}" >&2; exit 64 ;;
+        esac
+        "$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-readelf" \
+          -h "$BINARY" | grep -F "Machine:" | grep -F "$ELF_MACHINE"

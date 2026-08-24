@@ -21,15 +21,10 @@ void main(List<String> args) async {
     final LinkMode linkMode;
     switch (os) {
       case OS.macOS:
-        final architecture = input.config.code.targetArchitecture;
-        final architectureDirectory = switch (architecture) {
-          Architecture.arm64 => 'arm64',
-          Architecture.x64 => 'x64',
-          _ =>
-            throw UnsupportedError(
-              'Unsupported macOS architecture: ${architecture.name}',
-            ),
-        };
+        final architectureDirectory = _architectureDirectory(
+          os,
+          input.config.code.targetArchitecture,
+        );
         binaryUri = packageRoot.resolve(
           'binaries/macos/$packageVersion/$architectureDirectory/'
           'libtorrent-rasterbar.dylib',
@@ -38,22 +33,40 @@ void main(List<String> args) async {
             'macos-$architectureDirectory-libtorrent-rasterbar.dylib';
         linkMode = DynamicLoadingBundled();
       case OS.android:
-        binaryUri = packageRoot.resolve(
-          'binaries/android/$packageVersion/libtorrent-rasterbar.so',
+        final architectureDirectory = _architectureDirectory(
+          os,
+          input.config.code.targetArchitecture,
         );
-        releaseAssetName = 'android-libtorrent-rasterbar.so';
+        binaryUri = packageRoot.resolve(
+          'binaries/android/$packageVersion/$architectureDirectory/'
+          'libtorrent-rasterbar.so',
+        );
+        releaseAssetName =
+            'android-$architectureDirectory-libtorrent-rasterbar.so';
         linkMode = DynamicLoadingBundled();
       case OS.linux:
-        binaryUri = packageRoot.resolve(
-          'binaries/linux/$packageVersion/libtorrent-rasterbar.so',
+        final architectureDirectory = _architectureDirectory(
+          os,
+          input.config.code.targetArchitecture,
         );
-        releaseAssetName = 'linux-libtorrent-rasterbar.so';
+        binaryUri = packageRoot.resolve(
+          'binaries/linux/$packageVersion/$architectureDirectory/'
+          'libtorrent-rasterbar.so',
+        );
+        releaseAssetName =
+            'linux-$architectureDirectory-libtorrent-rasterbar.so';
         linkMode = DynamicLoadingBundled();
       case OS.windows:
-        binaryUri = packageRoot.resolve(
-          'binaries/windows/$packageVersion/torrent-rasterbar.dll',
+        final architectureDirectory = _architectureDirectory(
+          os,
+          input.config.code.targetArchitecture,
         );
-        releaseAssetName = 'windows-torrent-rasterbar.dll';
+        binaryUri = packageRoot.resolve(
+          'binaries/windows/$packageVersion/$architectureDirectory/'
+          'torrent-rasterbar.dll',
+        );
+        releaseAssetName =
+            'windows-$architectureDirectory-torrent-rasterbar.dll';
         linkMode = DynamicLoadingBundled();
       case OS.iOS:
         binaryUri = packageRoot.resolve(
@@ -92,6 +105,20 @@ void main(List<String> args) async {
     output.dependencies.add(binaryUri);
   });
 }
+
+String _architectureDirectory(OS os, Architecture architecture) => switch ((
+  os,
+  architecture,
+)) {
+  (OS.android, Architecture.arm64) => 'arm64-v8a',
+  (OS.android, Architecture.x64) => 'x86_64',
+  (OS.macOS || OS.linux || OS.windows, Architecture.arm64) => 'arm64',
+  (OS.macOS || OS.linux || OS.windows, Architecture.x64) => 'x64',
+  _ =>
+    throw UnsupportedError(
+      'Unsupported ${os.name} architecture: ${architecture.name}',
+    ),
+};
 
 String _resolvePackageVersion(Uri packageRoot) {
   final pubspecFile = File.fromUri(packageRoot.resolve('pubspec.yaml'));

@@ -1,23 +1,30 @@
 #!/usr/bin/env bash
-# Cross-compile a static OpenSSL for Android arm64-v8a using the NDK.
+# Cross-compile static OpenSSL for Android arm64-v8a or x86_64 using the NDK.
 # Runs on Linux (GitHub Actions ubuntu-latest) and Linux WSL.
 #
 # Produces:
-#   thirdparty/openssl-android/arm64-v8a/
+#   thirdparty/openssl-android/<arm64-v8a|x86_64>/
 #       include/openssl/   (headers)
 #       lib/libssl.a
 #       lib/libcrypto.a
 set -euo pipefail
 
 OPENSSL_VERSION="${1:-3.4.1}"
+ANDROID_ABI="${2:-arm64-v8a}"
 NDK_HOME="${ANDROID_NDK_HOME:-${ANDROID_NDK_ROOT:-}}"
-FORCE="${2:-}"
+FORCE="${3:-}"
+
+case "$ANDROID_ABI" in
+    arm64-v8a) OPENSSL_TARGET="android-arm64" ;;
+    x86_64) OPENSSL_TARGET="android-x86_64" ;;
+    *) echo "Unsupported Android ABI: $ANDROID_ABI" >&2; exit 64 ;;
+esac
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-OUT_DIR="$REPO_ROOT/thirdparty/openssl-android/arm64-v8a"
+OUT_DIR="$REPO_ROOT/thirdparty/openssl-android/$ANDROID_ABI"
 TARBALL="/tmp/openssl-${OPENSSL_VERSION}.tar.gz"
 SRC_DIR="/tmp/openssl-${OPENSSL_VERSION}"
-BUILD_DIR="/tmp/openssl-android-build"
+BUILD_DIR="/tmp/openssl-android-$ANDROID_ABI-build"
 
 if [[ -f "$OUT_DIR/lib/libssl.a" && -z "$FORCE" ]]; then
     echo "Static OpenSSL already built at $OUT_DIR  (pass --force to rebuild)"
@@ -75,8 +82,8 @@ cp -r "$SRC_DIR" "$BUILD_DIR"
 cd "$BUILD_DIR"
 
 echo ""
-echo "Configuring OpenSSL $OPENSSL_VERSION for android-arm64 ..."
-perl Configure android-arm64 \
+echo "Configuring OpenSSL $OPENSSL_VERSION for $OPENSSL_TARGET ..."
+perl Configure "$OPENSSL_TARGET" \
     no-shared \
     no-tests \
     --prefix="$OUT_DIR" \

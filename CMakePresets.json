@@ -10,14 +10,30 @@
       }
     },
     {
-      "name": "linux",
-      "displayName": "Linux – GCC/Clang Release",
+      "name": "linux-base",
+      "hidden": true,
       "inherits": "base",
       "generator": "Ninja",
       "cacheVariables": {
         "CMAKE_C_COMPILER_LAUNCHER": "ccache",
         "CMAKE_CXX_COMPILER_LAUNCHER": "ccache",
         "LTD_BOOST_HEADERS_ROOT": "/usr/include"
+      }
+    },
+    {
+      "name": "linux-x64",
+      "displayName": "Linux x64 – GCC/Clang Release",
+      "inherits": "linux-base",
+      "cacheVariables": {
+        "LTD_TARGET_ARCHITECTURE": "x64"
+      }
+    },
+    {
+      "name": "linux-arm64",
+      "displayName": "Linux arm64 – GCC/Clang Release",
+      "inherits": "linux-base",
+      "cacheVariables": {
+        "LTD_TARGET_ARCHITECTURE": "arm64"
       }
     },
     {
@@ -51,26 +67,39 @@
       }
     },
     {
-      "name": "windows",
-      "displayName": "Windows – MSVC x64 Release",
+      "name": "windows-base",
+      "hidden": true,
       "inherits": "base",
       "generator": "Ninja",
       "cacheVariables": {
         "CMAKE_C_COMPILER": "cl",
         "CMAKE_CXX_COMPILER": "cl",
-        "CMAKE_C_COMPILER_LAUNCHER": "ccache",
-        "CMAKE_CXX_COMPILER_LAUNCHER": "ccache",
         "CMAKE_MSVC_RUNTIME_LIBRARY": "MultiThreaded$<$<CONFIG:Debug>:Debug>"
       }
     },
     {
-      "name": "android",
-      "displayName": "Android arm64-v8a Release",
+      "name": "windows-x64",
+      "displayName": "Windows x64 – MSVC Release",
+      "inherits": "windows-base",
+      "cacheVariables": {
+        "LTD_TARGET_ARCHITECTURE": "x64"
+      }
+    },
+    {
+      "name": "windows-arm64",
+      "displayName": "Windows arm64 – MSVC Release",
+      "inherits": "windows-base",
+      "cacheVariables": {
+        "LTD_TARGET_ARCHITECTURE": "arm64"
+      }
+    },
+    {
+      "name": "android-base",
+      "hidden": true,
       "inherits": "base",
       "generator": "Ninja",
       "cacheVariables": {
         "CMAKE_TOOLCHAIN_FILE": "$env{ANDROID_NDK_HOME}/build/cmake/android.toolchain.cmake",
-        "ANDROID_ABI": "arm64-v8a",
         "ANDROID_PLATFORM": "android-24",
         "ANDROID_STL": "c++_static",
         "CMAKE_C_COMPILER_LAUNCHER": "ccache",
@@ -78,6 +107,24 @@
         "HAVE_CXX_ATOMICS_WITHOUT_LIB": "ON",
         "HAVE_CXX_ATOMICS8_WITHOUT_LIB": "ON",
         "HAVE_CXX_ATOMICS64_WITHOUT_LIB": "ON"
+      }
+    },
+    {
+      "name": "android-arm64",
+      "displayName": "Android arm64-v8a Release",
+      "inherits": "android-base",
+      "cacheVariables": {
+        "ANDROID_ABI": "arm64-v8a",
+        "LTD_TARGET_ARCHITECTURE": "arm64-v8a"
+      }
+    },
+    {
+      "name": "android-x64",
+      "displayName": "Android x86_64 Release",
+      "inherits": "android-base",
+      "cacheVariables": {
+        "ANDROID_ABI": "x86_64",
+        "LTD_TARGET_ARCHITECTURE": "x86_64"
       }
     },
     {
@@ -96,8 +143,13 @@
   ],
   "buildPresets": [
     {
-      "name": "linux",
-      "configurePreset": "linux",
+      "name": "linux-x64",
+      "configurePreset": "linux-x64",
+      "targets": ["libtorrent_dart"]
+    },
+    {
+      "name": "linux-arm64",
+      "configurePreset": "linux-arm64",
       "targets": ["libtorrent_dart"]
     },
     {
@@ -111,13 +163,23 @@
       "targets": ["libtorrent_dart"]
     },
     {
-      "name": "windows",
-      "configurePreset": "windows",
+      "name": "windows-x64",
+      "configurePreset": "windows-x64",
       "targets": ["libtorrent_dart"]
     },
     {
-      "name": "android",
-      "configurePreset": "android",
+      "name": "windows-arm64",
+      "configurePreset": "windows-arm64",
+      "targets": ["libtorrent_dart"]
+    },
+    {
+      "name": "android-arm64",
+      "configurePreset": "android-arm64",
+      "targets": ["libtorrent_dart"]
+    },
+    {
+      "name": "android-x64",
+      "configurePreset": "android-x64",
       "targets": ["libtorrent_dart"]
     },
     {

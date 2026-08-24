@@ -14,15 +14,16 @@ binaries/<platform>/<package-version>/<binary-name>
 Example for package version `0.3.2` on Linux:
 
 ```
-binaries/linux/0.3.2/libtorrent-rasterbar.so
+binaries/linux/0.3.2/x64/libtorrent-rasterbar.so
 ```
 
 This prevents accidentally loading stale binaries from an older package version.
-macOS adds an architecture directory because Flutter runs native-asset hooks
-once per target architecture and combines the resulting thin binaries itself:
+Every multi-architecture platform adds an architecture directory. Flutter runs
+native-asset hooks once per target architecture and selects the matching thin
+binary:
 
 ```
-binaries/macos/<package-version>/<arm64|x64>/libtorrent-rasterbar.dylib
+binaries/<platform>/<package-version>/<architecture>/<binary-name>
 ```
 
 When building manually, pass `-DLTD_BINARY_LAYOUT_VERSION=<package-version>` so
@@ -59,11 +60,14 @@ output lands in `cmake_build/<preset-name>/` and binaries are written to
 
 | Preset        | Platform    | Generator | Notes                                                 |
 | ------------- | ----------- | --------- | ----------------------------------------------------- |
-| `linux`       | Linux       | Ninja     | gcc/clang, ccache, Boost from `/usr/include`          |
+| `linux-x64`   | Linux x64   | Ninja     | Native x64 runner, gcc/clang, ccache, Boost headers   |
+| `linux-arm64` | Linux arm64 | Ninja     | Native arm64 runner, gcc/clang, ccache, Boost headers |
 | `macos-arm64` | macOS arm64 | Ninja     | Apple Silicon runner and Homebrew dependencies       |
 | `macos-x64`   | macOS x64   | Ninja     | Intel runner and Homebrew dependencies               |
-| `windows`     | Windows     | Ninja     | **MSVC only** (cl.exe), ccache, static MSVC runtime   |
-| `android`     | Android     | Ninja     | arm64-v8a, API 24, NDK toolchain, c++\_static, ccache |
+| `windows-x64` | Windows x64 | Ninja     | Native x64 MSVC runner, static MSVC runtime           |
+| `windows-arm64` | Windows arm64 | Ninja | Native arm64 MSVC runner, static MSVC runtime         |
+| `android-arm64` | Android arm64-v8a | Ninja | API 24, NDK toolchain, c++\_static, ccache       |
+| `android-x64` | Android x86_64 | Ninja | API 24, NDK toolchain, c++\_static, ccache           |
 | `ios`         | iOS         | Xcode     | arm64, deployment target 13.0, no OpenSSL             |
 
 ## Linux
@@ -72,11 +76,16 @@ output lands in `cmake_build/<preset-name>/` and binaries are written to
 sudo apt-get install -y cmake ninja-build ccache libboost-dev libssl-dev
 
 VERSION="$(grep -E '^version:' pubspec.yaml | awk '{print $2}')"
-cmake --preset linux -DLTD_BINARY_LAYOUT_VERSION="$VERSION"
-cmake --build --preset linux --parallel
+case "$(uname -m)" in
+  x86_64) PRESET="linux-x64" ;;
+  aarch64|arm64) PRESET="linux-arm64" ;;
+  *) echo "Unsupported Linux architecture" >&2; exit 1 ;;
+esac
+cmake --preset "$PRESET" -DLTD_BINARY_LAYOUT_VERSION="$VERSION"
+cmake --build --preset "$PRESET" --parallel
 ```
 
-Output: `binaries/linux/<version>/libtorrent-rasterbar.so`
+Output: `binaries/linux/<version>/<x64|arm64>/libtorrent-rasterbar.so`
 
 ## macOS
 
@@ -113,68 +122,70 @@ MinGW / LLVM-MinGW are not supported.
 ```powershell
 # Install Boost (places headers under C:\local\boost_*)
 choco install boost-msvc-14.3 -y
-choco install ccache -y
 
-# Build static OpenSSL (output: thirdparty\openssl-windows\x64\)
-.\scripts\build_openssl_windows.ps1
+$architecture = if ($env:PROCESSOR_ARCHITECTURE -eq 'ARM64') { 'arm64' } else { 'x64' }
+
+# Build matching static OpenSSL output under thirdparty\openssl-windows\.
+.\scripts\build_openssl_windows.ps1 -Architecture $architecture
 
 $boostDir = Get-ChildItem 'C:\local' -Directory | Where-Object { $_.Name -like 'boost_*' } | Select-Object -First 1
 $version  = (Select-String pubspec.yaml -Pattern '^version:\s*(.+)$').Matches[0].Groups[1].Value.Trim()
-$OPENSSL  = "$(Get-Location)\thirdparty\openssl-windows\x64"
+$OPENSSL  = "$(Get-Location)\thirdparty\openssl-windows\$architecture"
+$preset = "windows-$architecture"
 
-cmake --preset windows `
+cmake --preset $preset `
   -DLTD_BOOST_HEADERS_ROOT="$($boostDir.FullName)" `
   -DLTD_BINARY_LAYOUT_VERSION="$version" `
   -DOPENSSL_ROOT_DIR="$OPENSSL" `
   -DOPENSSL_SSL_LIBRARY="$OPENSSL\lib\libssl.lib" `
   -DOPENSSL_CRYPTO_LIBRARY="$OPENSSL\lib\libcrypto.lib" `
   -DOPENSSL_INCLUDE_DIR="$OPENSSL\include"
-cmake --build --preset windows --parallel
+cmake --build --preset $preset --parallel
 ```
 
 `build_openssl_windows.ps1` downloads OpenSSL 3.4.1, installs Strawberry Perl
-via choco if needed, and builds with `/MT` (static MSVC runtime, `VC-WIN64A`
-target, `no-asm`). The script is idempotent — it skips the build if
-`thirdparty\openssl-windows\x64\lib\libssl.lib` already exists (pass `-Force`
-to rebuild).
+via choco if needed, and builds with `/MT` (static MSVC runtime,
+`VC-WIN64A`/`VC-WIN64-ARM`, `no-asm`). The script is idempotent and maintains
+independent x64 and arm64 output directories (pass `-Force` to rebuild).
 
-Output: `binaries/windows/<version>/torrent-rasterbar.dll`
+Output: `binaries/windows/<version>/<x64|arm64>/torrent-rasterbar.dll`
 
-## Android (NDK arm64-v8a)
+## Android (NDK arm64-v8a and x86_64)
 
 Requires Android NDK 26.3.11579264 with `ANDROID_NDK_HOME` set.
 
 ```sh
 sudo apt-get install -y cmake ninja-build ccache libboost-dev
 
-# Build static OpenSSL for arm64 (output: thirdparty/openssl-android/arm64-v8a/)
-bash scripts/build_openssl_android.sh
-
 VERSION="$(grep -E '^version:' pubspec.yaml | awk '{print $2}')"
 # Copy Boost to a non-system path: the NDK toolchain strips /usr/include
 mkdir -p /tmp/boost-include && cp -r /usr/include/boost /tmp/boost-include/
 BOOST_ROOT="/tmp/boost-include"
-OPENSSL_ROOT="$PWD/thirdparty/openssl-android/arm64-v8a"
+for ABI in arm64-v8a x86_64; do
+  if [[ "$ABI" == "arm64-v8a" ]]; then PRESET="android-arm64"; else PRESET="android-x64"; fi
+  bash scripts/build_openssl_android.sh 3.4.1 "$ABI"
+  OPENSSL_ROOT="$PWD/thirdparty/openssl-android/$ABI"
 
-cmake --preset android \
-  -DLTD_BINARY_LAYOUT_VERSION="$VERSION" \
-  -DLTD_BOOST_HEADERS_ROOT="$BOOST_ROOT" \
-  -DBoost_INCLUDE_DIR="$BOOST_ROOT" \
-  -DBoost_INCLUDE_DIRS="$BOOST_ROOT" \
-  -DBOOST_ROOT="$BOOST_ROOT" \
-  -DBOOST_INCLUDEDIR="$BOOST_ROOT" \
-  -DOPENSSL_ROOT_DIR="$OPENSSL_ROOT" \
-  -DOPENSSL_CRYPTO_LIBRARY="$OPENSSL_ROOT/lib/libcrypto.a" \
-  -DOPENSSL_SSL_LIBRARY="$OPENSSL_ROOT/lib/libssl.a" \
-  -DOPENSSL_INCLUDE_DIR="$OPENSSL_ROOT/include"
-cmake --build --preset android --parallel
+  cmake --preset "$PRESET" \
+    -DLTD_BINARY_LAYOUT_VERSION="$VERSION" \
+    -DLTD_BOOST_HEADERS_ROOT="$BOOST_ROOT" \
+    -DBoost_INCLUDE_DIR="$BOOST_ROOT" \
+    -DBoost_INCLUDE_DIRS="$BOOST_ROOT" \
+    -DBOOST_ROOT="$BOOST_ROOT" \
+    -DBOOST_INCLUDEDIR="$BOOST_ROOT" \
+    -DOPENSSL_ROOT_DIR="$OPENSSL_ROOT" \
+    -DOPENSSL_CRYPTO_LIBRARY="$OPENSSL_ROOT/lib/libcrypto.a" \
+    -DOPENSSL_SSL_LIBRARY="$OPENSSL_ROOT/lib/libssl.a" \
+    -DOPENSSL_INCLUDE_DIR="$OPENSSL_ROOT/include"
+  cmake --build --preset "$PRESET" --parallel
+done
 ```
 
 `build_openssl_android.sh` downloads OpenSSL 3.4.1 and cross-compiles it for
-`android-arm64` (`-D__ANDROID_API__=24`). It is idempotent — pass `--force`
-as a second argument to force a rebuild.
+the requested ABI (`-D__ANDROID_API__=24`). It is idempotent; pass `--force`
+as the third argument to force a rebuild.
 
-Output: `binaries/android/<version>/libtorrent-rasterbar.so`
+Output: `binaries/android/<version>/<arm64-v8a|x86_64>/libtorrent-rasterbar.so`
 
 ## iOS (arm64)
 
@@ -210,9 +221,9 @@ dart test
 ### Tests workflow (`.github/workflows/tests.yml`)
 
 Triggered on every push to `main`, on pull requests, and on manual dispatch.
-Builds Linux, macOS, and Windows using the shared composite action at
-`.github/actions/build-native/`, then runs `dart analyze` and `dart test` on
-each runner.
+Builds and tests Linux, macOS, and Windows on native x64 and arm64 runners.
+Android arm64-v8a and x86_64 cross-builds run through the Android composite
+action; host Dart tests cannot load Android ELF binaries.
 
 ### Release workflow (`.github/workflows/release.yml`)
 
@@ -225,11 +236,14 @@ platforms in parallel (Linux, macOS, Windows, Android, iOS), then the
 
    | Asset file                                    | Platform      |
    | --------------------------------------------- | ------------- |
-   | `linux-libtorrent-rasterbar.so`               | Linux         |
-   | `macos-arm64-libtorrent-rasterbar.dylib`    | macOS arm64   |
-   | `macos-x64-libtorrent-rasterbar.dylib`      | macOS x64     |
-   | `windows-torrent-rasterbar.dll`               | Windows       |
-   | `android-libtorrent-rasterbar.so`             | Android arm64 |
+   | `linux-x64-libtorrent-rasterbar.so`           | Linux x64     |
+   | `linux-arm64-libtorrent-rasterbar.so`         | Linux arm64   |
+   | `macos-arm64-libtorrent-rasterbar.dylib`      | macOS arm64   |
+   | `macos-x64-libtorrent-rasterbar.dylib`        | macOS x64     |
+   | `windows-x64-torrent-rasterbar.dll`           | Windows x64   |
+   | `windows-arm64-torrent-rasterbar.dll`         | Windows arm64 |
+   | `android-arm64-v8a-libtorrent-rasterbar.so`   | Android arm64 |
+   | `android-x86_64-libtorrent-rasterbar.so`      | Android x64   |
    | `ios-libtorrent-rasterbar.a`                  | iOS arm64     |
 
 3. Creates or updates the GitHub release for the tag (using `gh release create`
