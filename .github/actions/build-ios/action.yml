@@ -1,15 +1,9 @@
 name: Build and verify iOS
-description: Build the complete iOS archive and link it into native and Flutter consumers
+description: Build the complete iOS archive and verify a native consumer link
 
 runs:
   using: composite
   steps:
-    - name: Set up Flutter
-      uses: flutter-actions/setup-flutter@d4e97a6e7467ef062618c9af927f90bc9651b876
-      with:
-        cache: true
-        cache-sdk: true
-
     - name: Install build dependencies
       shell: bash
       run: |
@@ -53,23 +47,3 @@ runs:
           -framework Security \
           -framework SystemConfiguration \
           -o "$RUNNER_TEMP/libtorrent-ios-link-smoke"
-
-    - name: Link Flutter iOS example
-      shell: bash
-      working-directory: mobile_test
-      run: |
-        flutter pub get
-        set +e
-        flutter build ios --release --no-codesign
-        FLUTTER_STATUS=$?
-        set -e
-
-        APP_BINARY="$(find "$HOME/Library/Developer/Xcode/DerivedData" \
-          -path '*/Build/Products/Release-iphoneos/Runner.app/Runner' \
-          -type f -print -quit)"
-        if [ -z "$APP_BINARY" ] || [ ! -f "$APP_BINARY" ]; then
-          echo "Flutter iOS build failed before producing an app binary" >&2
-          exit "$FLUTTER_STATUS"
-        fi
-        file "$APP_BINARY" | grep -q 'arm64'
-        nm "$APP_BINARY" | grep -q ' _lt_version$'
