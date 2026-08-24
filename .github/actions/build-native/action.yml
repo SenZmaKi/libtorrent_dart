@@ -10,12 +10,10 @@ runs:
     - name: Cache Dart packages
       uses: actions/cache@v6
       with:
-        path: |
-          ~/.pub-cache
-          .dart_tool
-        key: ${{ runner.os }}-dart-${{ hashFiles('pubspec.lock') }}
+        path: ~/.pub-cache
+        key: dart-v1-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('pubspec.yaml') }}
         restore-keys: |
-          ${{ runner.os }}-dart-
+          dart-v1-${{ runner.os }}-${{ runner.arch }}-
 
     - name: Install Linux dependencies
       if: runner.os == 'Linux'
@@ -44,8 +42,12 @@ runs:
         if (-not $boostDir) {
           choco install -y boost-msvc-14.3 --no-progress --limit-output --execution-timeout=1200
         }
+        if (-not (Get-Command ccache.exe -ErrorAction SilentlyContinue)) {
+          choco install -y ccache --no-progress --limit-output
+        }
         cmake --version
         ninja --version
+        ccache --version
 
     - name: Set up MSVC developer environment
       if: runner.os == 'Windows'
@@ -58,18 +60,25 @@ runs:
       uses: actions/cache@v6
       with:
         path: ~/.cache/ccache
-        key: ${{ runner.os }}-ccache-${{ github.sha }}
+        key: ccache-v1-${{ runner.os }}-${{ runner.arch }}-${{ github.sha }}
         restore-keys: |
-          ${{ runner.os }}-ccache-
+          ccache-v1-${{ runner.os }}-${{ runner.arch }}-
 
     - name: ccache Storage (Windows)
       if: runner.os == 'Windows'
       uses: actions/cache@v6
       with:
         path: ~\AppData\Local\ccache
-        key: ${{ runner.os }}-ccache-${{ github.sha }}
+        key: ccache-v1-${{ runner.os }}-${{ runner.arch }}-${{ github.sha }}
         restore-keys: |
-          ${{ runner.os }}-ccache-
+          ccache-v1-${{ runner.os }}-${{ runner.arch }}-
+
+    - name: Configure ccache
+      shell: bash
+      run: |
+        ccache --set-config=max_size=1G
+        ccache --set-config=compression=true
+        ccache --zero-stats
 
     - name: Configure and build (Linux)
       if: runner.os == 'Linux'
@@ -114,13 +123,14 @@ runs:
 
     - name: Cache Windows OpenSSL static libs
       if: runner.os == 'Windows'
+      id: windows_openssl_cache
       uses: actions/cache@v6
       with:
         path: thirdparty/openssl-windows
-        key: Windows-${{ runner.arch }}-openssl-3.4.1-mt
+        key: openssl-windows-v1-${{ runner.arch }}-3.4.1-mt-${{ hashFiles('scripts/build_openssl_windows.ps1') }}
 
     - name: Build static OpenSSL for Windows
-      if: runner.os == 'Windows'
+      if: runner.os == 'Windows' && steps.windows_openssl_cache.outputs.cache-hit != 'true'
       shell: pwsh
       run: |
         $ErrorActionPreference = 'Stop'
@@ -153,6 +163,10 @@ runs:
         if (-not ($headers | Select-String -SimpleMatch "machine ($machine)")) {
           throw "$binary is not a $machine DLL"
         }
+
+    - name: Show ccache statistics
+      shell: bash
+      run: ccache --show-stats
 
     - name: Pub get
       shell: bash

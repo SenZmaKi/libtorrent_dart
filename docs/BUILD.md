@@ -192,7 +192,7 @@ Output: `binaries/android/<version>/<arm64-v8a|x86_64>/libtorrent-rasterbar.so`
 Requires macOS with Xcode installed.
 
 ```sh
-brew install cmake ninja ccache boost
+brew install cmake ninja boost
 
 VERSION="$(grep -E '^version:' pubspec.yaml | awk '{print $2}')"
 BOOST_INC="$(brew --prefix boost)/include"
@@ -224,6 +224,14 @@ Triggered on every push to `main`, on pull requests, and on manual dispatch.
 Builds and tests Linux, macOS, and Windows on native x64 and arm64 runners.
 Android arm64-v8a and x86_64 cross-builds run through the Android composite
 action; host Dart tests cannot load Android ELF binaries.
+
+Native and Android jobs share architecture-scoped caches between the Tests and
+Release workflows. Dart package downloads are keyed by platform, architecture,
+and `pubspec.yaml`; ccache entries are compressed, capped at 1 GiB per target,
+and keyed by commit with an architecture-specific restore prefix. Android and
+Windows OpenSSL archives are keyed by OpenSSL/toolchain target and the build
+script hash. The iOS Xcode-generator build intentionally has no ccache entry:
+CMake compiler launchers only apply to Makefile and Ninja generators.
 
 ### Release workflow (`.github/workflows/release.yml`)
 

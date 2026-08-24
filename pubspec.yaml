@@ -3,7 +3,7 @@ description: >
   Cross-platform Dart FFI wrapper over libtorrent (libtorrent-rasterbar).
   Provides full ABI-compatible bindings for sessions, magnet downloads,
   progress polling, pause/resume/cancel, and settings.
-version: 0.3.2
+version: 0.4.0
 repository: https://github.com/SenZmaKi/libtorrent_dart
 
 environment:

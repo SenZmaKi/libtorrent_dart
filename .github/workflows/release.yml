@@ -115,15 +115,7 @@ jobs:
           if brew tap | grep -qx 'aws/tap'; then
             brew untap aws/tap
           fi
-          HOMEBREW_NO_AUTO_UPDATE=1 brew install cmake ninja ccache boost openssl@3
-
-      - name: ccache Storage
-        uses: actions/cache@v6
-        with:
-          path: ~/.cache/ccache
-          key: iOS-ccache-${{ github.sha }}
-          restore-keys: |
-            iOS-ccache-
+          HOMEBREW_NO_AUTO_UPDATE=1 brew install cmake ninja boost openssl@3
 
       - name: Configure and build (iOS arm64)
         run: |

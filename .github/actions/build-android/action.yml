@@ -35,7 +35,7 @@ runs:
       uses: actions/cache@v6
       with:
         path: thirdparty/openssl-android/${{ inputs.abi }}
-        key: android-openssl-3.4.1-ndk26-${{ inputs.abi }}
+        key: openssl-android-v1-3.4.1-ndk26-${{ inputs.abi }}-${{ hashFiles('scripts/build_openssl_android.sh') }}
 
     - name: Build static OpenSSL
       if: steps.openssl-cache.outputs.cache-hit != 'true'
@@ -46,9 +46,16 @@ runs:
       uses: actions/cache@v6
       with:
         path: ~/.cache/ccache
-        key: Android-${{ inputs.abi }}-ccache-${{ github.sha }}
+        key: ccache-v1-Android-${{ inputs.abi }}-${{ github.sha }}
         restore-keys: |
-          Android-${{ inputs.abi }}-ccache-
+          ccache-v1-Android-${{ inputs.abi }}-
+
+    - name: Configure ccache
+      shell: bash
+      run: |
+        ccache --set-config=max_size=1G
+        ccache --set-config=compression=true
+        ccache --zero-stats
 
     - name: Configure and build
       shell: bash
@@ -82,3 +89,7 @@ runs:
         esac
         "$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-readelf" \
           -h "$BINARY" | grep -F "Machine:" | grep -F "$ELF_MACHINE"
+
+    - name: Show ccache statistics
+      shell: bash
+      run: ccache --show-stats
