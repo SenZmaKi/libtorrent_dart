@@ -1,0 +1,19 @@
+# Publish only the consumer-facing Dart package. Native development sources,
+# build outputs, CI configuration, and test applications stay in the repository.
+.dart_tool/
+.git/
+.github/
+AGENTS.md
+CMakeLists.txt
+CMakePresets.json
+TODO.md
+binaries/
+build/
+cmake_build/
+cmake-build-*/
+docs/
+mobile_test/
+scripts/
+src/
+test/
+thirdparty/

@@ -13,10 +13,7 @@ Add this to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  libtorrent_dart:
-    git:
-      url: https://github.com/SenZmaKi/libtorrent_dart
-      ref: main # or specify a commit/tag
+  libtorrent_dart: ^0.4.1
 ```
 
 Then run:
@@ -25,7 +22,7 @@ Then run:
 dart pub get
 ```
 
-There is a build hook that attempts to download the required [binaries](https://github.com/SenZmaKi/libtorrent_dart/releases/latest) for the current platform and library version if they are not already present in the expected path.
+The build hook downloads the required [native binary](https://github.com/SenZmaKi/libtorrent_dart/releases/latest) for the current package version, platform, and architecture. Native assets are bundled into the consuming application by Dart's build system.
 
 ## Usage
 
@@ -35,15 +32,19 @@ Check out the [example](example/example.dart) for a quick start.
 
 Libtorrent API parity is tracked in:
 
-- [LIBTORRENT_API_PARITY.md](docs/LIBTORRENT_API_PARITY.md)
+- [LIBTORRENT_API_PARITY.md](https://github.com/SenZmaKi/libtorrent_dart/blob/main/docs/LIBTORRENT_API_PARITY.md)
 
 ## Platforms
 
-- Tested on Windows, Linux, macOS and Android.
+- Linux: ARM64 and x64.
+- macOS: Apple silicon and Intel.
+- Windows: ARM64 and x64.
+- Android: ARM64 and x64.
+- iOS: ARM64.
 - HTTPS torrents are currently not supported on iOS.
 
 ## Build
 
 Build instructions for all supported platforms (macOS, Linux, Windows, Android, iOS) are in:
 
-- [BUILD.md](docs/BUILD.md)
+- [BUILD.md](https://github.com/SenZmaKi/libtorrent_dart/blob/main/docs/BUILD.md)
