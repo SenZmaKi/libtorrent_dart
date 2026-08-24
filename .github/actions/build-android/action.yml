@@ -90,6 +90,13 @@ runs:
         esac
         "$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-readelf" \
           -h "$BINARY" | grep -F "Machine:" | grep -F "$ELF_MACHINE"
+        READELF="$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-readelf"
+        "$READELF" --dyn-syms --wide "$BINARY" | grep -E '[[:space:]]lt_version$'
+        DEPENDENCIES="$("$READELF" -d "$BINARY" | grep 'NEEDED' || true)"
+        if echo "$DEPENDENCIES" | grep -Ei 'libtorrent|libssl|libcrypto'; then
+          echo "$BINARY has an unbundled native dependency" >&2
+          exit 1
+        fi
 
     - name: Show ccache statistics
       shell: bash

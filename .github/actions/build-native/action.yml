@@ -104,6 +104,12 @@ runs:
 
         BINARY="binaries/linux/$VERSION/$ARCHITECTURE/libtorrent-rasterbar.so"
         readelf -h "$BINARY" | grep -F "Machine:" | grep -F "$ELF_MACHINE"
+        readelf --dyn-syms --wide "$BINARY" | grep -E '[[:space:]]lt_version$'
+        DEPENDENCIES="$(readelf -d "$BINARY" | grep 'NEEDED' || true)"
+        if echo "$DEPENDENCIES" | grep -Ei 'libtorrent|libssl|libcrypto'; then
+          echo "$BINARY has an unbundled native dependency" >&2
+          exit 1
+        fi
 
     - name: Configure and build (macOS)
       if: runner.os == 'macOS'
@@ -127,6 +133,12 @@ runs:
         EXPECTED_ARCHITECTURE="$(uname -m)"
         if [ "$(lipo -archs "$BINARY")" != "$EXPECTED_ARCHITECTURE" ]; then
           echo "$BINARY is not a thin $EXPECTED_ARCHITECTURE binary" >&2
+          exit 1
+        fi
+        nm -gU "$BINARY" | grep -E ' _lt_version$'
+        DEPENDENCIES="$(otool -L "$BINARY")"
+        if echo "$DEPENDENCIES" | grep -Ei 'libtorrent|libssl|libcrypto|/opt/homebrew|/usr/local'; then
+          echo "$BINARY has an unbundled or machine-local native dependency" >&2
           exit 1
         fi
 
@@ -171,6 +183,14 @@ runs:
         $headers = dumpbin /headers $binary
         if (-not ($headers | Select-String -SimpleMatch "machine ($machine)")) {
           throw "$binary is not a $machine DLL"
+        }
+        $exports = dumpbin /exports $binary
+        if (-not ($exports | Select-String -Pattern '\blt_version\b')) {
+          throw "$binary does not export lt_version"
+        }
+        $dependents = dumpbin /dependents $binary
+        if ($dependents | Select-String -Pattern '(?i)(torrent-rasterbar|libssl|libcrypto)') {
+          throw "$binary has an unbundled native dependency"
         }
 
     - name: Show ccache statistics

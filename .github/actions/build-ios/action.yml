@@ -52,6 +52,8 @@ runs:
           exit 1
         fi
         lipo "$ARCHIVE" -verify_arch arm64
+        nm "$ARCHIVE" | grep -E ' T _lt_version$'
+        nm "$ARCHIVE" | grep -E ' T _OPENSSL_init_ssl$'
 
         SDK_PATH="$(xcrun --sdk iphoneos --show-sdk-path)"
         xcrun --sdk iphoneos clang++ \
