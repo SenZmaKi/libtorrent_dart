@@ -4,4 +4,4 @@ analyzer:
   exclude:
     - "thirdparty/**"
     - "mobile_test/**"
-
+    - "cmake_build/**"

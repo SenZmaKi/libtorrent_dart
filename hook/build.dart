@@ -21,10 +21,21 @@ void main(List<String> args) async {
     final LinkMode linkMode;
     switch (os) {
       case OS.macOS:
+        final architecture = input.config.code.targetArchitecture;
+        final architectureDirectory = switch (architecture) {
+          Architecture.arm64 => 'arm64',
+          Architecture.x64 => 'x64',
+          _ =>
+            throw UnsupportedError(
+              'Unsupported macOS architecture: ${architecture.name}',
+            ),
+        };
         binaryUri = packageRoot.resolve(
-          'binaries/macos/$packageVersion/libtorrent-rasterbar.dylib',
+          'binaries/macos/$packageVersion/$architectureDirectory/'
+          'libtorrent-rasterbar.dylib',
         );
-        releaseAssetName = 'macos-libtorrent-rasterbar.dylib';
+        releaseAssetName =
+            'macos-$architectureDirectory-libtorrent-rasterbar.dylib';
         linkMode = DynamicLoadingBundled();
       case OS.android:
         binaryUri = packageRoot.resolve(

@@ -21,14 +21,33 @@
       }
     },
     {
-      "name": "macos",
-      "displayName": "macOS – Clang Release",
+      "name": "macos-base",
+      "hidden": true,
       "inherits": "base",
       "generator": "Ninja",
       "cacheVariables": {
         "CMAKE_C_COMPILER_LAUNCHER": "ccache",
         "CMAKE_CXX_COMPILER_LAUNCHER": "ccache",
         "LTD_BOOST_HEADERS_ROOT": "/opt/homebrew/include"
+      }
+    },
+    {
+      "name": "macos-arm64",
+      "displayName": "macOS arm64 – Clang Release",
+      "inherits": "macos-base",
+      "cacheVariables": {
+        "CMAKE_OSX_ARCHITECTURES": "arm64",
+        "CMAKE_OSX_DEPLOYMENT_TARGET": "11.0"
+      }
+    },
+    {
+      "name": "macos-x64",
+      "displayName": "macOS x64 – Clang Release",
+      "inherits": "macos-base",
+      "cacheVariables": {
+        "CMAKE_OSX_ARCHITECTURES": "x86_64",
+        "CMAKE_OSX_DEPLOYMENT_TARGET": "10.15",
+        "LTD_BOOST_HEADERS_ROOT": "/usr/local/include"
       }
     },
     {
@@ -82,8 +101,13 @@
       "targets": ["libtorrent_dart"]
     },
     {
-      "name": "macos",
-      "configurePreset": "macos",
+      "name": "macos-arm64",
+      "configurePreset": "macos-arm64",
+      "targets": ["libtorrent_dart"]
+    },
+    {
+      "name": "macos-x64",
+      "configurePreset": "macos-x64",
       "targets": ["libtorrent_dart"]
     },
     {

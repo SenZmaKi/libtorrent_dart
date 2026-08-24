@@ -136,8 +136,19 @@ if(IOS)
     ARCHIVE_OUTPUT_DIRECTORY "${LTD_OUTPUT_DIR}/ios${_ltd_version_suffix}"
   )
 elseif(APPLE)
+  if(CMAKE_OSX_ARCHITECTURES STREQUAL "arm64")
+    set(_ltd_macos_architecture "arm64")
+  elseif(CMAKE_OSX_ARCHITECTURES STREQUAL "x86_64")
+    set(_ltd_macos_architecture "x64")
+  else()
+    message(FATAL_ERROR
+      "macOS release binaries must be built as separate arm64 and x86_64 "
+      "slices. Use the macos-arm64 or macos-x64 preset."
+    )
+  endif()
   set_target_properties(libtorrent_dart PROPERTIES
-    LIBRARY_OUTPUT_DIRECTORY "${LTD_OUTPUT_DIR}/macos${_ltd_version_suffix}"
+    LIBRARY_OUTPUT_DIRECTORY
+      "${LTD_OUTPUT_DIR}/macos${_ltd_version_suffix}/${_ltd_macos_architecture}"
   )
 elseif(ANDROID)
   set_target_properties(libtorrent_dart PROPERTIES

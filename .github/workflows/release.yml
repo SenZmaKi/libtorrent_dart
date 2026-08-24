@@ -24,7 +24,14 @@ jobs:
           path: binaries/linux/*/libtorrent-rasterbar.so
 
   build-macos:
-    runs-on: macos-latest
+    strategy:
+      matrix:
+        include:
+          - architecture: arm64
+            runner: macos-15
+          - architecture: x64
+            runner: macos-15-intel
+    runs-on: ${{ matrix.runner }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -36,8 +43,8 @@ jobs:
       - name: Upload release binary
         uses: actions/upload-artifact@v4
         with:
-          name: macos-binary
-          path: binaries/macos/*/libtorrent-rasterbar.dylib
+          name: macos-${{ matrix.architecture }}-binary
+          path: binaries/macos/*/${{ matrix.architecture }}/libtorrent-rasterbar.dylib
 
   build-windows:
     runs-on: windows-latest
@@ -180,18 +187,20 @@ jobs:
       - name: Prepare release asset names
         run: |
           LINUX_LIB="$(find release-assets/linux-binary -type f -name 'libtorrent-rasterbar.so' | head -n 1)"
-          MACOS_LIB="$(find release-assets/macos-binary -type f -name 'libtorrent-rasterbar.dylib' | head -n 1)"
+          MACOS_ARM64_LIB="$(find release-assets/macos-arm64-binary -type f -name 'libtorrent-rasterbar.dylib' | head -n 1)"
+          MACOS_X64_LIB="$(find release-assets/macos-x64-binary -type f -name 'libtorrent-rasterbar.dylib' | head -n 1)"
           WINDOWS_LIB="$(find release-assets/windows-binary -type f -name 'torrent-rasterbar.dll' | head -n 1)"
           ANDROID_LIB="$(find release-assets/android-binary -type f -name 'libtorrent-rasterbar.so' | head -n 1)"
           IOS_LIB="$(find release-assets/ios-binary -type f -name '*.a' | head -n 1)"
 
-          if [ -z "$LINUX_LIB" ] || [ -z "$MACOS_LIB" ] || [ -z "$WINDOWS_LIB" ] || [ -z "$ANDROID_LIB" ] || [ -z "$IOS_LIB" ]; then
+          if [ -z "$LINUX_LIB" ] || [ -z "$MACOS_ARM64_LIB" ] || [ -z "$MACOS_X64_LIB" ] || [ -z "$WINDOWS_LIB" ] || [ -z "$ANDROID_LIB" ] || [ -z "$IOS_LIB" ]; then
             echo "One or more release binaries were not found in downloaded artifacts" >&2
             exit 1
           fi
 
           cp "$LINUX_LIB" release-assets/linux-libtorrent-rasterbar.so
-          cp "$MACOS_LIB" release-assets/macos-libtorrent-rasterbar.dylib
+          cp "$MACOS_ARM64_LIB" release-assets/macos-arm64-libtorrent-rasterbar.dylib
+          cp "$MACOS_X64_LIB" release-assets/macos-x64-libtorrent-rasterbar.dylib
           cp "$WINDOWS_LIB" release-assets/windows-torrent-rasterbar.dll
           cp "$ANDROID_LIB" release-assets/android-libtorrent-rasterbar.so
           cp "$IOS_LIB" release-assets/ios-libtorrent-rasterbar.a
@@ -204,7 +213,8 @@ jobs:
           if gh release view "$TAG_NAME" >/dev/null 2>&1; then
             gh release upload "$TAG_NAME" \
               release-assets/linux-libtorrent-rasterbar.so \
-              release-assets/macos-libtorrent-rasterbar.dylib \
+              release-assets/macos-arm64-libtorrent-rasterbar.dylib \
+              release-assets/macos-x64-libtorrent-rasterbar.dylib \
               release-assets/windows-torrent-rasterbar.dll \
               release-assets/android-libtorrent-rasterbar.so \
               release-assets/ios-libtorrent-rasterbar.a \
@@ -212,7 +222,8 @@ jobs:
           else
             gh release create "$TAG_NAME" \
               release-assets/linux-libtorrent-rasterbar.so \
-              release-assets/macos-libtorrent-rasterbar.dylib \
+              release-assets/macos-arm64-libtorrent-rasterbar.dylib \
+              release-assets/macos-x64-libtorrent-rasterbar.dylib \
               release-assets/windows-torrent-rasterbar.dll \
               release-assets/android-libtorrent-rasterbar.so \
               release-assets/ios-libtorrent-rasterbar.a \

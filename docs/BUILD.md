@@ -18,6 +18,13 @@ binaries/linux/0.3.2/libtorrent-rasterbar.so
 ```
 
 This prevents accidentally loading stale binaries from an older package version.
+macOS adds an architecture directory because Flutter runs native-asset hooks
+once per target architecture and combines the resulting thin binaries itself:
+
+```
+binaries/macos/<package-version>/<arm64|x64>/libtorrent-rasterbar.dylib
+```
+
 When building manually, pass `-DLTD_BINARY_LAYOUT_VERSION=<package-version>` so
 the output path matches what the hook will load.
 
@@ -50,13 +57,14 @@ The project ships a `CMakePresets.json` with ready-made presets. All build
 output lands in `cmake_build/<preset-name>/` and binaries are written to
 `binaries/<platform>/<version>/`.
 
-| Preset    | Platform | Generator | Notes                                                 |
-| --------- | -------- | --------- | ----------------------------------------------------- |
-| `linux`   | Linux    | Ninja     | gcc/clang, ccache, Boost from `/usr/include`          |
-| `macos`   | macOS    | Ninja     | clang, ccache, Boost from `/opt/homebrew/include`     |
-| `windows` | Windows  | Ninja     | **MSVC only** (cl.exe), ccache, static MSVC runtime   |
-| `android` | Android  | Ninja     | arm64-v8a, API 24, NDK toolchain, c++\_static, ccache |
-| `ios`     | iOS      | Xcode     | arm64, deployment target 13.0, no OpenSSL             |
+| Preset        | Platform    | Generator | Notes                                                 |
+| ------------- | ----------- | --------- | ----------------------------------------------------- |
+| `linux`       | Linux       | Ninja     | gcc/clang, ccache, Boost from `/usr/include`          |
+| `macos-arm64` | macOS arm64 | Ninja     | Apple Silicon runner and Homebrew dependencies       |
+| `macos-x64`   | macOS x64   | Ninja     | Intel runner and Homebrew dependencies               |
+| `windows`     | Windows     | Ninja     | **MSVC only** (cl.exe), ccache, static MSVC runtime   |
+| `android`     | Android     | Ninja     | arm64-v8a, API 24, NDK toolchain, c++\_static, ccache |
+| `ios`         | iOS         | Xcode     | arm64, deployment target 13.0, no OpenSSL             |
 
 ## Linux
 
@@ -78,14 +86,23 @@ brew install cmake ninja ccache boost openssl@3
 VERSION="$(grep -E '^version:' pubspec.yaml | awk '{print $2}')"
 BOOST_INC="$(brew --prefix boost)/include"
 OPENSSL_ROOT="$(brew --prefix openssl@3)"
-cmake --preset macos \
+case "$(uname -m)" in
+  arm64) PRESET="macos-arm64" ;;
+  x86_64) PRESET="macos-x64" ;;
+  *) echo "Unsupported macOS architecture" >&2; exit 1 ;;
+esac
+cmake --preset "$PRESET" \
   -DLTD_BOOST_HEADERS_ROOT="$BOOST_INC" \
   -DOPENSSL_ROOT_DIR="$OPENSSL_ROOT" \
   -DLTD_BINARY_LAYOUT_VERSION="$VERSION"
-cmake --build --preset macos --parallel
+cmake --build --preset "$PRESET" --parallel
 ```
 
-Output: `binaries/macos/<version>/libtorrent-rasterbar.dylib`
+Output: `binaries/macos/<version>/<arm64|x64>/libtorrent-rasterbar.dylib`
+
+Build each slice on its matching architecture. Do not merge them with `lipo`;
+Flutter's native-assets pipeline selects both thin inputs and creates the
+universal application binary.
 
 ## Windows (MSVC)
 
@@ -206,13 +223,14 @@ platforms in parallel (Linux, macOS, Windows, Android, iOS), then the
 1. Downloads all build artifacts.
 2. Renames them to the canonical release asset names:
 
-   | Asset file                         | Platform      |
-   | ---------------------------------- | ------------- |
-   | `linux-libtorrent-rasterbar.so`    | Linux         |
-   | `macos-libtorrent-rasterbar.dylib` | macOS         |
-   | `windows-torrent-rasterbar.dll`    | Windows       |
-   | `android-libtorrent-rasterbar.so`  | Android arm64 |
-   | `ios-libtorrent-rasterbar.a`       | iOS arm64     |
+   | Asset file                                    | Platform      |
+   | --------------------------------------------- | ------------- |
+   | `linux-libtorrent-rasterbar.so`               | Linux         |
+   | `macos-arm64-libtorrent-rasterbar.dylib`    | macOS arm64   |
+   | `macos-x64-libtorrent-rasterbar.dylib`      | macOS x64     |
+   | `windows-torrent-rasterbar.dll`               | Windows       |
+   | `android-libtorrent-rasterbar.so`             | Android arm64 |
+   | `ios-libtorrent-rasterbar.a`                  | iOS arm64     |
 
 3. Creates or updates the GitHub release for the tag (using `gh release create`
    / `gh release upload --clobber`) with auto-generated notes.
