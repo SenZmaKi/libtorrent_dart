@@ -64,8 +64,10 @@ runs:
         FLUTTER_STATUS=$?
         set -e
 
-        APP_BINARY="build/ios/iphoneos/Runner.app/Runner"
-        if [ ! -f "$APP_BINARY" ]; then
+        APP_BINARY="$(find "$HOME/Library/Developer/Xcode/DerivedData" \
+          -path '*/Build/Products/Release-iphoneos/Runner.app/Runner' \
+          -type f -print -quit)"
+        if [ -z "$APP_BINARY" ] || [ ! -f "$APP_BINARY" ]; then
           echo "Flutter iOS build failed before producing an app binary" >&2
           exit "$FLUTTER_STATUS"
         fi
