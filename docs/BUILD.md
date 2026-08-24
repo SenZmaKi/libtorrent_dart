@@ -258,6 +258,8 @@ platforms in parallel (Linux, macOS, Windows, Android, iOS), then the
 
 3. Creates or updates the GitHub release for the tag (using `gh release create`
    / `gh release upload --clobber`) with auto-generated notes.
+4. After the release assets exist, publishes the matching Dart package through
+   pub.dev's GitHub OIDC integration.
 
 ### Releasing a new version
 
@@ -271,3 +273,6 @@ platforms in parallel (Linux, macOS, Windows, Android, iOS), then the
    This reads the version from `pubspec.yaml`, checks for uncommitted changes,
    creates a local `v<version>` tag, pushes the branch, then pushes the tag —
    which triggers the Release workflow automatically.
+
+See [PUBLISHING.md](PUBLISHING.md) for the one-time pub.dev setup and the full
+publishing contract.
