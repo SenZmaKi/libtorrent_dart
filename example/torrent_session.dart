@@ -44,6 +44,9 @@ class DownloadSession {
   final String savePath;
 
   bool _paused = false;
+  bool _closed = false;
+  StreamSubscription<TorrentStatus>? _progressSubscription;
+
   bool get paused => _paused;
 
   static DownloadSession start({
@@ -81,24 +84,36 @@ class DownloadSession {
 
   StreamSubscription<TorrentStatus> listenProgress(
     void Function(TorrentStatus) onData,
-  ) => _torrent.listenProgress(onData: onData);
+  ) {
+    if (_closed) throw StateError('The download session is closed.');
+    if (_progressSubscription != null) {
+      throw StateError('Progress is already being monitored.');
+    }
+    return _progressSubscription = _torrent.listenProgress(onData: onData);
+  }
 
   void pause() {
+    if (_closed) return;
     _torrent.pause();
     _paused = true;
   }
 
   void resume() {
+    if (_closed) return;
     _torrent.resume();
     _paused = false;
   }
 
-  void cancel({bool deleteFiles = true}) {
-    _torrent.cancel(deleteFiles: deleteFiles);
-    _session.close();
-  }
+  Future<void> close({bool deleteFiles = false}) async {
+    if (_closed) return;
+    _closed = true;
 
-  void close() {
-    _session.close();
+    try {
+      await _progressSubscription?.cancel();
+      _progressSubscription = null;
+      _torrent.cancel(deleteFiles: deleteFiles);
+    } finally {
+      _session.close();
+    }
   }
 }

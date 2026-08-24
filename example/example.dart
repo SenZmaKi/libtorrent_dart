@@ -5,10 +5,7 @@ Future<void> main() async {
   final magnetUri = promptMagnet();
   final savePath = promptSavePath();
 
-  final dl = DownloadSession.start(
-    magnetUri: magnetUri,
-    savePath: savePath,
-  );
+  final dl = DownloadSession.start(magnetUri: magnetUri, savePath: savePath);
 
   await runDownloadUI(dl);
 }

@@ -101,8 +101,9 @@ void main() {
       equals(-1),
     );
     expect(ffi.torrent_have_piece(tor, -1), equals(-1));
-    final badPeer =
-        'invalid-address'.toNativeUtf8(allocator: calloc).cast<Char>();
+    final badPeer = 'invalid-address'
+        .toNativeUtf8(allocator: calloc)
+        .cast<Char>();
     expect(ffi.torrent_connect_peer(tor, badPeer, 6881), equals(-1));
     calloc.free(badPeer);
     calloc.free(pieceData);
@@ -131,14 +132,12 @@ void main() {
     expect(ffi.torrent_queue_position_top(tor), equals(0));
     expect(ffi.torrent_queue_position_bottom(tor), equals(0));
     expect(ffi.torrent_queue_position_set(tor, 0), equals(0));
-    final trackerUrl =
-        'udp://tracker.opentrackr.org:1337/announce'
-            .toNativeUtf8(allocator: calloc)
-            .cast<Char>();
-    final seedUrl =
-        'https://webtorrent.io/torrents/'
-            .toNativeUtf8(allocator: calloc)
-            .cast<Char>();
+    final trackerUrl = 'udp://tracker.opentrackr.org:1337/announce'
+        .toNativeUtf8(allocator: calloc)
+        .cast<Char>();
+    final seedUrl = 'https://webtorrent.io/torrents/'
+        .toNativeUtf8(allocator: calloc)
+        .cast<Char>();
     expect(ffi.torrent_add_tracker(tor, trackerUrl, 0), equals(0));
     final replaceUrls = calloc<Pointer<Char>>(1);
     replaceUrls[0] = trackerUrl;
@@ -154,10 +153,9 @@ void main() {
       ffi.torrent_get_save_path(tor, textBuf.cast<Char>(), 8192),
       equals(0),
     );
-    final movedSavePath =
-        '$testTempPath/libtorrent_dart_raw'
-            .toNativeUtf8(allocator: calloc)
-            .cast<Char>();
+    final movedSavePath = '$testTempPath/libtorrent_dart_raw'
+        .toNativeUtf8(allocator: calloc)
+        .cast<Char>();
     expect(ffi.torrent_move_storage(tor, movedSavePath, 0), equals(0));
     expect(
       ffi.torrent_get_trackers(tor, textBuf.cast<Char>(), 8192),

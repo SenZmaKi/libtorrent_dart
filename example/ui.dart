@@ -79,11 +79,17 @@ Future<void> runDownloadUI(DownloadSession dl) async {
   stdout.writeln('');
 
   final done = Completer<void>();
+  var finishing = false;
 
-  void finish({bool deleteFiles = false}) {
-    if (done.isCompleted) return;
-    dl.cancel(deleteFiles: deleteFiles);
-    done.complete();
+  Future<void> finish({bool deleteFiles = false, Object? error}) async {
+    if (finishing) return;
+    finishing = true;
+    try {
+      await dl.close(deleteFiles: deleteFiles);
+      error == null ? done.complete() : done.completeError(error);
+    } catch (cleanupError, stackTrace) {
+      done.completeError(cleanupError, stackTrace);
+    }
   }
 
   stdin
@@ -104,16 +110,18 @@ Future<void> runDownloadUI(DownloadSession dl) async {
         }
       case 'q':
         stdout.writeln('\nCancelling...');
-        keySub?.cancel();
-        finish(deleteFiles: true);
+        unawaited(keySub?.cancel());
+        unawaited(finish(deleteFiles: true));
     }
   });
 
-  final sub = dl.listenProgress((TorrentStatus s) {
+  dl.listenProgress((TorrentStatus s) {
     if (done.isCompleted) return;
 
     if (s.error.isNotEmpty) {
       stdout.writeln('\nerror: ${s.error}');
+      unawaited(keySub?.cancel());
+      unawaited(finish(error: LibtorrentException(s.error)));
       return;
     }
 
@@ -138,17 +146,19 @@ Future<void> runDownloadUI(DownloadSession dl) async {
 
     if (s.state == 4 || s.state == 5) {
       stdout.writeln('\n\nDownload complete! Files saved to: ${dl.savePath}');
-      keySub?.cancel();
-      finish();
+      unawaited(keySub?.cancel());
+      unawaited(finish());
     }
   });
 
-  await done.future;
-  await sub.cancel();
-
   try {
-    stdin
-      ..echoMode = true
-      ..lineMode = true;
-  } catch (_) {}
+    await done.future;
+  } finally {
+    await keySub.cancel();
+    try {
+      stdin
+        ..echoMode = true
+        ..lineMode = true;
+    } catch (_) {}
+  }
 }

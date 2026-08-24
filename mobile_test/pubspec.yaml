@@ -1,5 +1,5 @@
-name: libtorren_dart_mobile_test
-description: "A new Flutter project."
+name: libtorrent_dart_example
+description: Example Flutter application for libtorrent_dart.
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
@@ -40,6 +40,7 @@ dev_dependencies:
   integration_test:
     sdk: flutter
   flutter_lints: ^6.0.0
+  ffi: ^2.1.2
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec

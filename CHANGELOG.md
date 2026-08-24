@@ -1,3 +1,12 @@
+## 0.4.2
+
+- Replace the generated Flutter counter app with a working magnet download
+  example using the public `libtorrent_dart` API.
+- Clean up progress callbacks before removing torrents and closing sessions in
+  the command-line and Flutter examples.
+- Fix the Flutter example package metadata and analyzer dependencies.
+- Declare Android network access and document how to run the example.
+
 ## 0.4.1
 
 - Add prebuilt native assets for ARM64 and x64 Linux, macOS, Windows, and

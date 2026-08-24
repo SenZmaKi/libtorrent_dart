@@ -50,12 +50,12 @@ void main() {
     try {
       final payload = File('${tempDir.path}/payload.bin');
       payload.writeAsBytesSync(List<int>.generate(2048, (i) => i % 251));
-      final sourcePath =
-          payload.path.toNativeUtf8(allocator: calloc).cast<Char>();
-      final tracker =
-          'http://127.0.0.1/announce'
-              .toNativeUtf8(allocator: calloc)
-              .cast<Char>();
+      final sourcePath = payload.path
+          .toNativeUtf8(allocator: calloc)
+          .cast<Char>();
+      final tracker = 'http://127.0.0.1/announce'
+          .toNativeUtf8(allocator: calloc)
+          .cast<Char>();
       final requiredLen = calloc<Int32>();
       expect(
         ffi.lt_create_torrent_data(
@@ -87,8 +87,9 @@ void main() {
         torrentData.cast<Uint8>().asTypedList(requiredLen.value),
       );
       final loaded = calloc<ffi.LtTorrentFileInfoNative>();
-      final torrentPath =
-          torrentFile.path.toNativeUtf8(allocator: calloc).cast<Char>();
+      final torrentPath = torrentFile.path
+          .toNativeUtf8(allocator: calloc)
+          .cast<Char>();
       expect(ffi.lt_load_torrent_file(torrentPath, loaded), equals(0));
       expect(ffi.int8ArrayToString(loaded.ref.infohash_hex, 41), hasLength(40));
       expect(ffi.int8ArrayToString(loaded.ref.name, 256), isNotEmpty);
@@ -236,8 +237,9 @@ void main() {
     calloc.free(alertMessage);
     calloc.free(alertBuf);
     calloc.free(alertCategory);
-    final infohash =
-        sintelInfohashHex.toNativeUtf8(allocator: calloc).cast<Char>();
+    final infohash = sintelInfohashHex
+        .toNativeUtf8(allocator: calloc)
+        .cast<Char>();
     expect(ffi.session_find_torrent(ses, infohash), greaterThanOrEqualTo(0));
     final total = calloc<Int32>();
     expect(
@@ -281,8 +283,9 @@ void main() {
     );
     calloc.free(statuses);
     calloc.free(totalStatuses);
-    final dhtHost =
-        'router.bittorrent.com'.toNativeUtf8(allocator: calloc).cast<Char>();
+    final dhtHost = 'router.bittorrent.com'
+        .toNativeUtf8(allocator: calloc)
+        .cast<Char>();
     expect(ffi.session_add_dht_node(ses, dhtHost, 6881), equals(0));
     expect(ffi.session_is_dht_running(ses), anyOf(equals(0), equals(1)));
     expect(ffi.session_dht_get_item(ses, infohash), equals(0));
@@ -432,11 +435,13 @@ void main() {
 
     final addItems = calloc<ffi.LtTagItemNative>(2);
     addItems[0].tag = 0x100 + 5;
-    addItems[0].string_value =
-        sintelMagnet.toNativeUtf8(allocator: calloc).cast<Char>();
+    addItems[0].string_value = sintelMagnet
+        .toNativeUtf8(allocator: calloc)
+        .cast<Char>();
     addItems[1].tag = 0x100 + 9;
-    addItems[1].string_value =
-        testTempPath.toNativeUtf8(allocator: calloc).cast<Char>();
+    addItems[1].string_value = testTempPath
+        .toNativeUtf8(allocator: calloc)
+        .cast<Char>();
     final tor2 = ffi.session_add_torrent_items(ses, addItems, 2);
     expect(tor2, greaterThanOrEqualTo(0));
     expect(ffi.session_async_add_torrent_items(ses, addItems, 2), equals(0));
