@@ -138,7 +138,6 @@
         "CMAKE_SYSTEM_NAME": "iOS",
         "CMAKE_OSX_DEPLOYMENT_TARGET": "13.0",
         "CMAKE_OSX_ARCHITECTURES": "arm64",
-        "CMAKE_DISABLE_FIND_PACKAGE_OpenSSL": "ON",
         "LTD_BOOST_HEADERS_ROOT": "/opt/homebrew/include"
       }
     }

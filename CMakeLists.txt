@@ -50,9 +50,7 @@ endif()
 if(NOT ANDROID AND NOT IOS)
   set(OPENSSL_USE_STATIC_LIBS TRUE CACHE BOOL "" FORCE)
   # Provide Homebrew default; command-line -DOPENSSL_ROOT_DIR overrides this.
-  # iOS passes CMAKE_DISABLE_FIND_PACKAGE_OpenSSL=ON via its CMake preset
-  # so libtorrent falls back to its built-in crypto (no OpenSSL on iOS).
-  # Android and Windows use cross-compiled/bundled static OpenSSL passed via
+  # iOS, Android, and Windows use cross-compiled/bundled static OpenSSL passed via
   # -DOPENSSL_ROOT_DIR (and explicit -DOPENSSL_SSL_LIBRARY / CRYPTO_LIBRARY).
   if(APPLE AND NOT OPENSSL_ROOT_DIR)
     set(OPENSSL_ROOT_DIR "/opt/homebrew/opt/openssl@3")
@@ -140,6 +138,17 @@ if(IOS)
     "${LTD_OUTPUT_DIR}/ios${_ltd_version_suffix}")
   set(_ltd_ios_archive
     "${_ltd_ios_output_dir}/libtorrent-rasterbar.a")
+  set(_ltd_ios_native_archives
+    "$<TARGET_FILE:libtorrent_dart>"
+    "$<TARGET_FILE:torrent-rasterbar>")
+  set(_ltd_ios_archive_dependencies libtorrent_dart torrent-rasterbar)
+  if(OPENSSL_SSL_LIBRARY AND OPENSSL_CRYPTO_LIBRARY)
+    list(APPEND _ltd_ios_native_archives
+      "${OPENSSL_SSL_LIBRARY}"
+      "${OPENSSL_CRYPTO_LIBRARY}")
+    list(APPEND _ltd_ios_archive_dependencies
+      "${OPENSSL_SSL_LIBRARY}" "${OPENSSL_CRYPTO_LIBRARY}")
+  endif()
 
   # A static library does not absorb static libraries passed to
   # target_link_libraries(). Keep the wrapper as an intermediate archive and
@@ -155,18 +164,14 @@ if(IOS)
       "${CMAKE_CURRENT_BINARY_DIR}/ios-libtorrent"
   )
 
-  add_custom_command(
-    OUTPUT "${_ltd_ios_archive}"
+  add_custom_target(libtorrent_dart_ios_bundle ALL
     COMMAND "${CMAKE_COMMAND}" -E make_directory "${_ltd_ios_output_dir}"
     COMMAND "${LTD_XCRUN}" libtool -static -o "${_ltd_ios_archive}"
-      "$<TARGET_FILE:libtorrent_dart>"
-      "$<TARGET_FILE:torrent-rasterbar>"
-    DEPENDS libtorrent_dart torrent-rasterbar
+      ${_ltd_ios_native_archives}
+    DEPENDS ${_ltd_ios_archive_dependencies}
     COMMENT "Combining the Dart wrapper and libtorrent into the iOS archive"
     VERBATIM
   )
-  add_custom_target(libtorrent_dart_ios_bundle ALL
-    DEPENDS "${_ltd_ios_archive}")
 elseif(APPLE)
   if(CMAKE_OSX_ARCHITECTURES STREQUAL "arm64")
     set(_ltd_macos_architecture "arm64")
