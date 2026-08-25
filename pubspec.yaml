@@ -1,6 +1,6 @@
 name: libtorrent_dart
 description: Cross-platform Dart FFI bindings for libtorrent sessions, magnet downloads, torrent controls, progress, and settings.
-version: 0.4.5
+version: 1.0.0
 repository: https://github.com/SenZmaKi/libtorrent_dart
 issue_tracker: https://github.com/SenZmaKi/libtorrent_dart/issues
 topics:

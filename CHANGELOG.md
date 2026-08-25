@@ -1,3 +1,8 @@
+## 1.0.0
+
+- Mark the cross-platform native-assets API as stable.
+- Document installation through `dart pub add libtorrent_dart`.
+
 ## 0.4.5
 
 - Include the complete Dart implementation in the published package archive.
