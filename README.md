@@ -9,17 +9,8 @@ This package exposes two entry points:
 
 ## Installation
 
-Add this to your `pubspec.yaml`:
-
-```yaml
-dependencies:
-  libtorrent_dart: ^0.4.1
-```
-
-Then run:
-
-```bash
-dart pub get
+```shell
+dart pub add libtorrent_dart
 ```
 
 The build hook downloads the required [native binary](https://github.com/SenZmaKi/libtorrent_dart/releases/latest) for the current package version, platform, and architecture. Native assets are bundled into the consuming application by Dart's build system.
