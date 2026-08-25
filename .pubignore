@@ -14,7 +14,7 @@ cmake-build-*/
 docs/
 mobile_test/
 scripts/
-src/
+/src/
 test/
 thirdparty/
 tool/

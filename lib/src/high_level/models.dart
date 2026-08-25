@@ -1,21 +1,35 @@
 part of '../libtorrent_dart.dart';
 
+/// An error reported by libtorrent or the Dart wrapper.
 class LibtorrentException implements Exception {
+  /// Creates an exception with a human-readable [message] and native [code].
   LibtorrentException(this.message, {this.code = 0});
+
+  /// A description of the failed operation.
   final String message;
+
+  /// The native libtorrent error code, or zero when unavailable.
   final int code;
 
   @override
   String toString() => 'LibtorrentException(code: $code, message: $message)';
 }
 
+/// A text alert emitted by a libtorrent session.
 class AlertMessage {
+  /// Creates an alert with its [message] and category bitmask.
   AlertMessage({required this.message, required this.category});
+
+  /// Human-readable alert text.
   final String message;
+
+  /// The alert category bitmask.
   final int category;
 }
 
+/// Structured details for an alert emitted by a session.
 class AlertInfo {
+  /// Creates structured alert information.
   AlertInfo({
     required this.type,
     required this.category,
@@ -26,28 +40,54 @@ class AlertInfo {
     this.dhtEndpointPort,
     this.dhtSamples = const <DhtSampleInfohash>[],
   });
+
+  /// The native alert type identifier.
   final int type;
+
+  /// The alert category bitmask.
   final int category;
+
+  /// The native alert name.
   final String what;
+
+  /// Human-readable alert text.
   final String message;
+
+  /// The related torrent identifier, when applicable.
   final int? torrentId;
+
+  /// The related DHT endpoint address, when applicable.
   final String? dhtEndpointAddress;
+
+  /// The related DHT endpoint port, when applicable.
   final int? dhtEndpointPort;
+
+  /// Infohash samples carried by a DHT sample alert.
   final List<DhtSampleInfohash> dhtSamples;
 }
 
+/// Metadata extracted from a magnet URI.
 class MagnetUriInfo {
+  /// Creates parsed magnet metadata.
   const MagnetUriInfo({
     required this.infohashHex,
     required this.name,
     required this.trackers,
   });
+
+  /// The hexadecimal torrent infohash.
   final String infohashHex;
+
+  /// The display name supplied by the magnet URI.
   final String name;
+
+  /// Tracker URLs supplied by the magnet URI.
   final List<String> trackers;
 }
 
+/// Basic metadata read from a torrent file.
 class TorrentFileInfo {
+  /// Creates torrent-file metadata.
   const TorrentFileInfo({
     required this.infohashHex,
     required this.name,
@@ -55,13 +95,22 @@ class TorrentFileInfo {
     required this.numFiles,
   });
 
+  /// The hexadecimal torrent infohash.
   final String infohashHex;
+
+  /// The torrent name.
   final String name;
+
+  /// Total content size in bytes.
   final int totalSize;
+
+  /// Number of files in the torrent.
   final int numFiles;
 }
 
+/// High-level settings used to configure a [Session].
 class SessionConfig {
+  /// Creates a session configuration containing only the supplied overrides.
   const SessionConfig({
     this.uploadRateLimit,
     this.downloadRateLimit,
@@ -86,28 +135,70 @@ class SessionConfig {
     this.proxy,
   });
 
+  /// Global upload rate limit in bytes per second.
   final int? uploadRateLimit;
+
+  /// Global download rate limit in bytes per second.
   final int? downloadRateLimit;
+
+  /// Maximum number of peer connections.
   final int? connectionsLimit;
+
+  /// Maximum number of unchoked peers.
   final int? unchokeSlotsLimit;
+
+  /// Maximum number of active downloads.
   final int? activeDownloads;
+
+  /// Maximum number of active seeds.
   final int? activeSeeds;
+
+  /// Maximum number of active torrents.
   final int? activeLimit;
+
+  /// Share-ratio limit used by auto-managed torrents.
   final int? seedRatioLimit;
+
+  /// Seed-time limit used by auto-managed torrents.
   final Duration? seedTimeLimit;
+
+  /// Seed-time ratio limit used by auto-managed torrents.
   final int? seedTimeRatioLimit;
+
+  /// TCP and uTP listening port.
   final int? torrentPort;
+
+  /// Outgoing encryption policy from [LibtorrentEncryptionPolicy].
   final int? outgoingEncryptionPolicy;
+
+  /// Incoming encryption policy from [LibtorrentEncryptionPolicy].
   final int? incomingEncryptionPolicy;
+
+  /// Allowed encryption level from [LibtorrentEncryptionLevel].
   final int? allowedEncryptionLevel;
+
+  /// Whether anonymous mode is enabled.
   final bool? anonymousMode;
+
+  /// Whether incoming TCP connections are enabled.
   final bool? enableIncomingTcp;
+
+  /// Whether incoming uTP connections are enabled.
   final bool? enableIncomingUtp;
+
+  /// Whether outgoing TCP connections are enabled.
   final bool? enableOutgoingTcp;
+
+  /// Whether outgoing uTP connections are enabled.
   final bool? enableOutgoingUtp;
+
+  /// Whether auto-management should prefer seeding torrents.
   final bool? autoManagePreferSeeds;
+
+  /// Proxy configuration applied to the session.
   final ProxySetting? proxy;
 
+  /// Converts the configured values into libtorrent setting tag items.
   List<LibtorrentTagItem> toSettingsItems() {
     final torrentPort = this.torrentPort;
     return [
@@ -214,6 +305,7 @@ class SessionConfig {
     ];
   }
 
+  /// Builds IPv4 and IPv6 listen-interface values for [port].
   static String listenInterfacesForPort(int port) {
     if (port < 0 || port > 65535) {
       throw RangeError.range(port, 0, 65535, 'port');
@@ -222,18 +314,28 @@ class SessionConfig {
   }
 }
 
+/// Describes a file currently held open by libtorrent.
 class OpenFileState {
+  /// Creates an open-file state snapshot.
   const OpenFileState({
     required this.fileIndex,
     required this.openMode,
     required this.lastUseMs,
   });
+
+  /// Index of the file within the torrent.
   final int fileIndex;
+
+  /// Native file open-mode flags.
   final int openMode;
+
+  /// Milliseconds since the file was last used.
   final int lastUseMs;
 }
 
+/// Metadata for one file within a torrent.
 class TorrentFileEntry {
+  /// Creates a torrent file entry.
   const TorrentFileEntry({
     required this.index,
     required this.size,
@@ -241,14 +343,26 @@ class TorrentFileEntry {
     required this.flags,
     required this.path,
   });
+
+  /// Index of the file within the torrent.
   final int index;
+
+  /// File size in bytes.
   final int size;
+
+  /// Byte offset within the torrent payload.
   final int offset;
+
+  /// Native libtorrent file flags.
   final int flags;
+
+  /// Relative file path.
   final String path;
 }
 
+/// A snapshot of aggregate session transfer and DHT statistics.
 class SessionStatus {
+  /// Creates a session status snapshot.
   SessionStatus({
     required this.hasIncomingConnections,
     required this.uploadRate,
@@ -326,7 +440,9 @@ class SessionStatus {
   final int dhtGlobalNodes;
 }
 
+/// A snapshot of a torrent's transfer, peer, and lifecycle state.
 class TorrentStatus {
+  /// Creates a torrent status snapshot.
   TorrentStatus({
     required this.progress,
     required this.downloadRate,
@@ -420,7 +536,9 @@ class TorrentStatus {
   final String error;
 }
 
+/// Proxy settings for peer, tracker, and DHT traffic.
 class ProxySetting {
+  /// Creates a proxy configuration.
   const ProxySetting({
     required this.hostname,
     required this.port,
@@ -429,14 +547,25 @@ class ProxySetting {
     this.type = LibtorrentProxyType.none,
   });
 
+  /// Proxy host name or IP address.
   final String hostname;
+
+  /// Proxy port.
   final int port;
+
+  /// Optional proxy username.
   final String username;
+
+  /// Optional proxy password.
   final String password;
+
+  /// Proxy type from [LibtorrentProxyType].
   final int type;
 }
 
+/// Download-block counts for a partially completed piece.
 class PartialPieceInfo {
+  /// Creates partial-piece information.
   const PartialPieceInfo({
     required this.pieceIndex,
     required this.blocksInPiece,
@@ -445,14 +574,25 @@ class PartialPieceInfo {
     required this.requested,
   });
 
+  /// Torrent piece index.
   final int pieceIndex;
+
+  /// Number of blocks in the piece.
   final int blocksInPiece;
+
+  /// Number of finished blocks.
   final int finished;
+
+  /// Number of blocks being written.
   final int writing;
+
+  /// Number of requested blocks.
   final int requested;
 }
 
+/// Transfer and connection information for a peer.
 class PeerInfo {
+  /// Creates a peer information snapshot.
   const PeerInfo({
     required this.ip,
     required this.port,
@@ -467,27 +607,55 @@ class PeerInfo {
     required this.source,
   });
 
+  /// Peer IP address.
   final String ip;
+
+  /// Peer port.
   final int port;
+
+  /// Reported BitTorrent client name.
   final String client;
+
+  /// Upload speed in bytes per second.
   final int upSpeed;
+
+  /// Download speed in bytes per second.
   final int downSpeed;
+
+  /// Payload upload speed in bytes per second.
   final int payloadUpSpeed;
+
+  /// Payload download speed in bytes per second.
   final int payloadDownSpeed;
+
+  /// Total bytes downloaded from this peer.
   final int totalDownload;
+
+  /// Total bytes uploaded to this peer.
   final int totalUpload;
+
+  /// Native peer flags.
   final int flags;
+
+  /// Native peer discovery-source flags.
   final int source;
 }
 
+/// An infohash and endpoint returned by a DHT sample alert.
 class DhtSampleInfohash {
+  /// Creates a DHT sample entry.
   const DhtSampleInfohash({
     required this.infohashHex,
     required this.address,
     required this.port,
   });
 
+  /// Sampled hexadecimal infohash.
   final String infohashHex;
+
+  /// Address of the DHT node that supplied the sample.
   final String address;
+
+  /// Port of the DHT node that supplied the sample.
   final int port;
 }

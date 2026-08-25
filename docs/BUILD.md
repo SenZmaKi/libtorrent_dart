@@ -41,10 +41,12 @@ environment variables:
 ## Prerequisites (all platforms)
 
 - CMake 3.20+
-- Ninja (`brew install ninja` / `apt install ninja-build` / `choco install ninja`)
-- ccache (`brew install ccache` / `apt install ccache` / `choco install ccache`)
+- Ninja (`brew install ninja` / `apt install ninja-build` / `choco install ninja`),
+  except for iOS, which uses Xcode
+- ccache (`brew install ccache` / `apt install ccache` / `choco install ccache`),
+  except for the iOS Xcode build
 - Boost headers 1.80+ (see per-platform instructions below)
-- Dart SDK ≥ 3.7.0
+- Dart SDK ≥ 3.10.0
 - Git with submodules:
 
 ```sh
@@ -68,7 +70,7 @@ output lands in `cmake_build/<preset-name>/` and binaries are written to
 | `windows-arm64` | Windows arm64 | Ninja | Native arm64 MSVC runner, static MSVC runtime         |
 | `android-arm64` | Android arm64-v8a | Ninja | API 24, NDK toolchain, c++\_static, ccache       |
 | `android-x64` | Android x86_64 | Ninja | API 24, NDK toolchain, c++\_static, ccache           |
-| `ios`         | iOS         | Xcode     | arm64, deployment target 13.0, no OpenSSL             |
+| `ios`         | iOS         | Xcode     | arm64, deployment target 13.0, bundled OpenSSL 3.4.1  |
 
 ## Linux
 
@@ -192,21 +194,34 @@ Output: `binaries/android/<version>/<arm64-v8a|x86_64>/libtorrent-rasterbar.so`
 Requires macOS with Xcode installed.
 
 ```sh
-brew install cmake ninja boost
+brew install cmake boost
 
 VERSION="$(grep -E '^version:' pubspec.yaml | awk '{print $2}')"
 BOOST_INC="$(brew --prefix boost)/include"
+OPENSSL_ROOT="$PWD/thirdparty/openssl-ios/arm64"
+
+bash scripts/build_openssl_ios.sh 3.4.1
 
 cmake --preset ios \
+  -DCMAKE_DISABLE_FIND_PACKAGE_OpenSSL=OFF \
   -DLTD_BOOST_HEADERS_ROOT="$BOOST_INC" \
+  -DOPENSSL_ROOT_DIR="$OPENSSL_ROOT" \
+  -DOPENSSL_SSL_LIBRARY="$OPENSSL_ROOT/lib/libssl.a" \
+  -DOPENSSL_CRYPTO_LIBRARY="$OPENSSL_ROOT/lib/libcrypto.a" \
+  -DOPENSSL_INCLUDE_DIR="$OPENSSL_ROOT/include" \
   -DLTD_BINARY_LAYOUT_VERSION="$VERSION"
 cmake --build --preset ios --parallel
 ```
 
-OpenSSL is disabled for iOS (`CMAKE_DISABLE_FIND_PACKAGE_OpenSSL=ON` in the
-preset); libtorrent falls back to its built-in crypto implementation.
+`build_openssl_ios.sh` downloads OpenSSL 3.4.1 and builds an arm64 static iOS
+archive. The CMake bundle target combines the Dart wrapper, libtorrent,
+`libssl.a`, and `libcrypto.a` into one consumer-facing archive.
 
-Output: `binaries/ios/<version>/Release/libtorrent-rasterbar.a`
+Output: `binaries/ios/<version>/libtorrent-rasterbar.a`
+
+The iOS workflow verifies that the archive is larger than the thin wrapper,
+contains more than two members, contains arm64 code, exports `lt_version` and
+`OPENSSL_init_ssl`, and links successfully into a minimal arm64 iOS consumer.
 
 ## Dart checks
 
@@ -230,15 +245,20 @@ Release workflows. Dart package downloads are keyed by platform, architecture,
 and `pubspec.yaml`; ccache entries are compressed, capped at 1 GiB per target,
 and keyed by commit with an architecture-specific restore prefix. Android
 identifies the freshly installed NDK compiler by content instead of timestamp,
-so equivalent toolchain installs can reuse compiler results. Android and Windows
-OpenSSL archives are keyed by OpenSSL/toolchain target and the build script hash.
-The iOS Xcode-generator build intentionally has no ccache entry: CMake compiler
-launchers only apply to Makefile and Ninja generators.
+so equivalent toolchain installs can reuse compiler results. Android, Windows,
+and iOS OpenSSL archives are keyed by OpenSSL/toolchain target and the relevant
+build-script hash. The iOS Xcode-generator build intentionally has no ccache
+entry: CMake compiler launchers only apply to Makefile and Ninja generators.
+
+Linux, Android, Windows, and macOS builds validate the produced architecture and
+the exported `lt_version` symbol. Dynamic-library builds also reject unbundled
+libtorrent, OpenSSL, and machine-local Homebrew dependencies. The iOS job uses
+the archive and consumer-link checks described above.
 
 ### Release workflow (`.github/workflows/release.yml`)
 
 Triggered by pushing a `v*` tag or via manual dispatch. Builds all five
-platforms in parallel (Linux, macOS, Windows, Android, iOS), then the
+platforms in parallel (Linux, macOS, Windows, Android, iOS), then runs the
 `publish-release` job:
 
 1. Downloads all build artifacts.
@@ -258,8 +278,14 @@ platforms in parallel (Linux, macOS, Windows, Android, iOS), then the
 
 3. Creates or updates the GitHub release for the tag (using `gh release create`
    / `gh release upload --clobber`) with auto-generated notes.
-4. After the release assets exist, publishes the matching Dart package through
-   pub.dev's GitHub OIDC integration.
+4. For a pushed `v*` tag only, publishes the matching Dart package through
+   pub.dev's GitHub OIDC integration after the release assets exist. Manual
+   dispatch does not run the pub.dev publication job.
+
+For manual dispatch, the selected ref's `github.ref_name` is used as the GitHub
+release name. Select an existing version tag when manually rebuilding release
+assets; dispatching from a branch would use that branch name as the release
+name.
 
 ### Releasing a new version
 

@@ -1,6 +1,11 @@
 # libtorrent API Parity (Spec vs Current Port)
 
-This document compares the holistic C++ API described in `docs/LIBTORRENT_API_SPEC.md` (libtorrent 2.0.11) against the current `libtorrent_dart` port.
+This document compares the holistic C++ API described in
+`docs/LIBTORRENT_API_SPEC.md` against the current `libtorrent_dart` port.
+
+- **Snapshot date**: 2026-08-25
+- **libtorrent baseline**: 2.0.11, commit `163d36465`
+- **libtorrent_dart snapshot**: 0.4.5 development tree
 
 ## How this comparison was done
 
@@ -9,6 +14,12 @@ This document compares the holistic C++ API described in `docs/LIBTORRENT_API_SP
   - C shim: `src/c/libtorrent.h`
   - Raw Dart FFI: `lib/src/ffi/native_functions.dart`, `lib/src/ffi/native_structs.dart`
   - High-level Dart API: `lib/src/high_level/session.dart`, `lib/src/high_level/torrent_handle.dart`, `lib/src/high_level/models.dart`, `lib/src/high_level/tags.dart`
+- **Count method**:
+  - C functions are unique `LTD_API` function declarations, excluding the two
+    platform-specific `LTD_API` macro definitions.
+  - FFI functions are Dart `external` declarations annotated with `@Native`.
+  - Counts describe the C bridge surface, not one-to-one holistic C++ parity;
+    one bridge function may simplify or combine several C++ concepts.
 
 Legend:
 
@@ -26,8 +37,13 @@ Legend:
   - **Advanced C++ objects and ecosystems** (full `settings_pack`, `file_storage`, full alert type hierarchy, peer class management, port mapping APIs, IP/port filters, BEP52-rich data structures, many utility/header domains): not migrated.
 - Quantitatively (surface size only):
   - `docs/LIBTORRENT_API_SPEC.md`: documents **272 headers** and a holistic API.
-  - `src/c/libtorrent.h`: **~114 exported C shim functions**.
-  - `lib/src/ffi/native_functions.dart`: **110 FFI extern bindings**.
+  - `src/c/libtorrent.h`: **146 exported C shim functions**.
+  - `lib/src/ffi/native_functions.dart`: **139 FFI extern bindings**.
+  - The seven C functions without direct Dart externs are legacy or variadic
+    entry points superseded by typed bridge functions:
+    `session_create`, `session_add_torrent`, `session_set_settings`,
+    `torrent_get_name`, `torrent_get_info_hash`, `torrent_queue_position`, and
+    `torrent_set_settings`.
 
 ---
 
@@ -58,12 +74,27 @@ Legend:
 - Session limit controls (client-facing):
   - upload/download rate limit
   - connections limit and unchoke slots limit
+- High-level session configuration:
+  - `SessionConfig` and `applyConfig`
+  - active download/seed/total limits
+  - seed ratio, seed time, and seed time ratio limits
+  - torrent listen port
+  - incoming/outgoing encryption policies and allowed encryption level
+  - anonymous mode, incoming/outgoing TCP and uTP toggles
+  - auto-managed seed preference
+  - general, peer, web-seed, tracker, and DHT proxy setters
+- Generic settings access:
+  - typed int, bool, and string get/set helpers
+  - tag-item batch settings through `setSettingsFromTags` and
+    `applySettingsFromTags`
 - Session state serialization:
   - `getState(flags)` and restore-from-state constructor
 
 ### Partially migrated
 
-- `apply_settings(settings_pack)` equivalent exists only through tag-based setting APIs and scalar getters/setters.
+- `apply_settings(settings_pack)` is represented by `SessionConfig`, tag-based
+  setting APIs, and scalar getters/setters rather than a complete typed
+  `settings_pack` mirror.
 - Alert interaction is primarily message/type/category based; full typed C++ alert object ecosystem is not exposed.
 - DHT APIs support core immutable item paths and sampling, but not full mutable-item callback signature semantics from C++.
 
@@ -111,6 +142,9 @@ Legend:
 - File placement:
   - whole-torrent `move_storage`
   - per-file `rename_file`
+  - file rename overrides when adding torrent files or in-memory torrent data
+- Torrent identity and placement getters:
+  - name, save path, infohash, flags, and queue position
 - Progress callback bridge:
   - `listenProgress(...)` through C callback + polling
 
@@ -163,12 +197,19 @@ Legend:
 - Torrent-scope equivalents:
   - `torrent_get_setting`, `torrent_set_int_setting`, `torrent_set_settings_items`
 - Common setting tags/constants exposed in `LibtorrentSettingsTag` and `LibtorrentTag`.
+- `SessionConfig` provides a typed high-level subset covering rate, connection,
+  activity, seeding, listen-port, encryption, transport, anonymity, and proxy
+  settings.
+- Dedicated high-level getters/setters cover those session settings plus DHT
+  limits and DHT/LSD/UPnP/NAT-PMP enablement.
 - Proxy configuration bridge:
   - peer/web seed/tracker/DHT/general proxy setters using `ProxySetting`.
 
 ### Partially migrated
 
-- Only a **small subset** of `settings_pack` int/bool/string settings is represented by constants/helpers.
+- Only a **targeted subset** of `settings_pack` int/bool/string settings is
+  represented by typed constants and helpers, despite the expanded
+  `SessionConfig` surface.
 - Tag-based API provides flexibility but not full typed parity with all spec enums and helper methods.
 
 ### Not migrated
@@ -310,6 +351,8 @@ Legend:
   - torrent flags (subset-like mapping)
   - remove flags
   - proxy types
+  - encryption policy and encryption level
+  - setting value types
   - major tag constants for session/torrent/settings shim
 
 ### Partially migrated
@@ -380,3 +423,11 @@ If your target is:
 
 - **Common torrent client operations in Dart** (session lifecycle, add/remove torrents, status, alerts, trackers, DHT basics, priorities, resume/state): current port already covers a substantial subset.
 - **Holistic libtorrent C++ API parity** (all objects/enums/settings/headers and rich typed semantics): current port is **far from complete** and would need significant shim + Dart surface expansion.
+
+## Keeping this document current
+
+Update this file whenever a change adds or removes public functions in
+`src/c/libtorrent.h`, `lib/src/ffi/native_functions.dart`, or the exported
+high-level session/torrent/model/tag APIs. Recalculate the bridge counts from
+source and trace every new feature through all three layers: C++ implementation
+and C shim, Dart FFI declaration, and high-level Dart consumer API.

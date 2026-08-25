@@ -30,9 +30,8 @@ _MarshaledTagItems _marshalTagItems(List<LibtorrentTagItem> src) {
       allocations.add(p.cast<Void>());
     }
     if (s.renamedFilesValue != null) {
-      final values =
-          s.renamedFilesValue!.entries.toList()
-            ..sort((a, b) => a.key.compareTo(b.key));
+      final values = s.renamedFilesValue!.entries.toList()
+        ..sort((a, b) => a.key.compareTo(b.key));
       final array = calloc<ffi.LtRenamedFileEntryNative>(values.length);
       allocations.add(array.cast<Void>());
       for (var j = 0; j < values.length; j++) {

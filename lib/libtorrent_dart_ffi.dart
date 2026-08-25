@@ -3,6 +3,8 @@
 /// Exposes the raw C function pointers and native structs declared in
 /// `src/c/libtorrent.h`.  Prefer `package:libtorrent_dart/libtorrent_dart.dart`
 /// for everyday use.
+///
+/// @nodoc
 library;
 
 export 'src/libtorrent_dart_ffi.dart';

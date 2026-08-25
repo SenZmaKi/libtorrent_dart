@@ -1,3 +1,11 @@
+## 0.4.5
+
+- Include the complete Dart implementation in the published package archive.
+- Restore pub.dev analysis, documentation, and native platform detection.
+- Document the supported high-level API and hide raw C bindings from dartdoc.
+- Update native-asset hooks to `code_assets` 2.0 and `hooks` 2.2.
+- Require Dart 3.10 or newer and verify dependency lower bounds.
+
 ## 0.4.4
 
 - Package the Dart wrapper and libtorrent object files together in the iOS

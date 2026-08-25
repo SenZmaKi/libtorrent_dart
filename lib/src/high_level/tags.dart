@@ -1,5 +1,6 @@
 part of '../libtorrent_dart.dart';
 
+/// Numeric identifiers for libtorrent session settings.
 class LibtorrentSettingsTag {
   LibtorrentSettingsTag._();
 
@@ -34,6 +35,7 @@ class LibtorrentSettingsTag {
   static const int anonymousMode = 0x8000 + 38;
 }
 
+/// Numeric value types accepted by libtorrent settings.
 class LibtorrentSettingType {
   LibtorrentSettingType._();
 
@@ -42,6 +44,7 @@ class LibtorrentSettingType {
   static const int stringType = 0x302;
 }
 
+/// Numeric identifiers used by the tag-based C ABI.
 class LibtorrentTag {
   LibtorrentTag._();
 
@@ -99,6 +102,7 @@ class LibtorrentTag {
   static const int settingsString = 0x300 + 2;
 }
 
+/// Supported proxy types.
 class LibtorrentProxyType {
   LibtorrentProxyType._();
 
@@ -110,6 +114,7 @@ class LibtorrentProxyType {
   static const int httpPassword = 5;
 }
 
+/// Encryption policy values.
 class LibtorrentEncryptionPolicy {
   LibtorrentEncryptionPolicy._();
 
@@ -118,6 +123,7 @@ class LibtorrentEncryptionPolicy {
   static const int disabled = 2;
 }
 
+/// Encryption level values.
 class LibtorrentEncryptionLevel {
   LibtorrentEncryptionLevel._();
 
@@ -126,6 +132,7 @@ class LibtorrentEncryptionLevel {
   static const int both = 3;
 }
 
+/// Alert-category bit flags.
 class LibtorrentAlertCategory {
   LibtorrentAlertCategory._();
 
@@ -143,6 +150,7 @@ class LibtorrentAlertCategory {
   static const int all = 0xFFFFFFFF;
 }
 
+/// Torrent lifecycle-state values.
 class LibtorrentTorrentState {
   LibtorrentTorrentState._();
 
@@ -156,6 +164,7 @@ class LibtorrentTorrentState {
   static const int checkingResumeData = 7;
 }
 
+/// Torrent storage allocation modes.
 class LibtorrentStorageMode {
   LibtorrentStorageMode._();
 
@@ -163,6 +172,7 @@ class LibtorrentStorageMode {
   static const int sparse = 1;
 }
 
+/// Flags used when adding a torrent.
 class LibtorrentTorrentFlags {
   LibtorrentTorrentFlags._();
 
@@ -188,6 +198,7 @@ class LibtorrentTorrentFlags {
   static const int i2pTorrent = 1 << 24;
 }
 
+/// Flags used when removing a torrent.
 class LibtorrentRemoveFlags {
   LibtorrentRemoveFlags._();
 
@@ -195,6 +206,7 @@ class LibtorrentRemoveFlags {
   static const int deletePartfile = 2;
 }
 
+/// A typed value passed through libtorrent's tag-based C ABI.
 class LibtorrentTagItem {
   const LibtorrentTagItem._({
     required this.tag,

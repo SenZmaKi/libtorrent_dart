@@ -1,5 +1,6 @@
 part of '../libtorrent_dart.dart';
 
+/// Creates a session using libtorrent's default settings.
 Session createSession() {
   ffi.lt_clear_error();
   final handle = ffi.session_create_default();
@@ -9,6 +10,7 @@ Session createSession() {
   return Session._(handle);
 }
 
+/// Returns the bundled libtorrent version string.
 String getLibtorrentVersion() {
   final buf = calloc<Int8>(64);
   try {
@@ -21,6 +23,7 @@ String getLibtorrentVersion() {
   }
 }
 
+/// Parses [magnetUri] without adding it to a session.
 MagnetUriInfo parseMagnetUri(String magnetUri) {
   final uriPtr = magnetUri.toNativeUtf8(allocator: calloc);
   final info = calloc<ffi.LtMagnetInfoNative>();
@@ -29,10 +32,9 @@ MagnetUriInfo parseMagnetUri(String magnetUri) {
       _throwLastError('Failed to parse magnet URI');
     }
     final trackersRaw = ffi.int8ArrayToString(info.ref.trackers, 2048);
-    final trackers =
-        trackersRaw.isEmpty
-            ? const <String>[]
-            : trackersRaw.split('\n').where((line) => line.isNotEmpty).toList();
+    final trackers = trackersRaw.isEmpty
+        ? const <String>[]
+        : trackersRaw.split('\n').where((line) => line.isNotEmpty).toList();
     return MagnetUriInfo(
       infohashHex: ffi.int8ArrayToString(info.ref.infohash_hex, 41),
       name: ffi.int8ArrayToString(info.ref.name, 256),
@@ -44,6 +46,7 @@ MagnetUriInfo parseMagnetUri(String magnetUri) {
   }
 }
 
+/// Reads basic metadata from the torrent file at [path].
 TorrentFileInfo loadTorrentFile(String path) {
   final pathPtr = path.toNativeUtf8(allocator: calloc);
   final info = calloc<ffi.LtTorrentFileInfoNative>();
@@ -63,6 +66,7 @@ TorrentFileInfo loadTorrentFile(String path) {
   }
 }
 
+/// Creates encoded torrent data for the supplied files or directory.
 Uint8List createTorrentData({
   required String sourcePath,
   String? trackerUrl,
@@ -70,10 +74,9 @@ Uint8List createTorrentData({
 }) {
   final sourcePathPtr = sourcePath.toNativeUtf8(allocator: calloc);
   final hasTrackerUrl = trackerUrl != null;
-  final trackerUrlPtr =
-      hasTrackerUrl
-          ? trackerUrl.toNativeUtf8(allocator: calloc).cast<Char>()
-          : nullptr.cast<Char>();
+  final trackerUrlPtr = hasTrackerUrl
+      ? trackerUrl.toNativeUtf8(allocator: calloc).cast<Char>()
+      : nullptr.cast<Char>();
   final requiredLen = calloc<Int32>();
   try {
     var rc = ffi.lt_create_torrent_data(
@@ -118,6 +121,7 @@ Uint8List createTorrentData({
   }
 }
 
+/// Creates a torrent file at [outputPath].
 void createTorrentFile({
   required String sourcePath,
   required String outputPath,
@@ -132,6 +136,7 @@ void createTorrentFile({
   File(outputPath).writeAsBytesSync(data, flush: true);
 }
 
+/// Creates a session from low-level [LibtorrentTagItem] settings.
 Session createSessionFromTags(List<LibtorrentTagItem> items) {
   final marshaled = _marshalTagItems(items);
   try {
@@ -146,6 +151,7 @@ Session createSessionFromTags(List<LibtorrentTagItem> items) {
   }
 }
 
+/// Restores a session from previously serialized [state].
 Session createSessionFromState(Uint8List state, {int flags = 0}) {
   final statePtr = calloc<Uint8>(state.length);
   statePtr.asTypedList(state.length).setAll(0, state);
@@ -165,6 +171,7 @@ Session createSessionFromState(Uint8List state, {int flags = 0}) {
   }
 }
 
+/// Owns a native libtorrent session and the torrents added to it.
 class Session {
   Session._(this._handle);
 
@@ -415,26 +422,27 @@ class Session {
         totalSamples,
       );
       if (rc < 0) return null;
-      final sampleCount =
-          totalSamples.value < maxSamples ? totalSamples.value : maxSamples;
-      final dhtSamples =
-          sampleCount <= 0
-              ? const <DhtSampleInfohash>[]
-              : List<DhtSampleInfohash>.generate(sampleCount, (index) {
-                final sample = (samples + index).ref;
-                return DhtSampleInfohash(
-                  infohashHex: ffi.int8ArrayToString(sample.infohash_hex, 41),
-                  address: ffi.int8ArrayToString(sample.address, 64),
-                  port: sample.port,
-                );
-              });
+      final sampleCount = totalSamples.value < maxSamples
+          ? totalSamples.value
+          : maxSamples;
+      final dhtSamples = sampleCount <= 0
+          ? const <DhtSampleInfohash>[]
+          : List<DhtSampleInfohash>.generate(sampleCount, (index) {
+              final sample = (samples + index).ref;
+              return DhtSampleInfohash(
+                infohashHex: ffi.int8ArrayToString(sample.infohash_hex, 41),
+                address: ffi.int8ArrayToString(sample.address, 64),
+                port: sample.port,
+              );
+            });
       final torrentId = info.ref.torrent_id >= 0 ? info.ref.torrent_id : null;
       final endpointAddress = ffi.int8ArrayToString(
         info.ref.dht_endpoint_address,
         64,
       );
-      final endpointPort =
-          info.ref.dht_endpoint_port > 0 ? info.ref.dht_endpoint_port : null;
+      final endpointPort = info.ref.dht_endpoint_port > 0
+          ? info.ref.dht_endpoint_port
+          : null;
       return AlertInfo(
         type: info.ref.type,
         category: info.ref.category,

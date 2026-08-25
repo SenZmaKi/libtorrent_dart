@@ -1,9 +1,12 @@
 part of '../libtorrent_dart.dart';
 
+/// Controls and inspects a torrent owned by a [Session].
 class TorrentHandle {
   TorrentHandle._(this._sessionHandle, this.id);
 
   final Pointer<Void> _sessionHandle;
+
+  /// The session-local torrent identifier used by the native API.
   final int id;
 
   StreamSubscription<TorrentStatus> listenProgress({
