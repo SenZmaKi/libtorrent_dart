@@ -1,3 +1,8 @@
+## 1.0.1
+
+- Add Android ARMv7 (`armeabi-v7a`) native binary support.
+- Fix native CI Dart SDK setup on composite-action callers.
+
 ## 1.0.0
 
 - Mark the cross-platform native-assets API as stable.
