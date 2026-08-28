@@ -80,6 +80,8 @@ jobs:
     strategy:
       matrix:
         include:
+          - abi: armeabi-v7a
+            preset: android-armv7
           - abi: arm64-v8a
             preset: android-arm64
           - abi: x86_64
@@ -141,11 +143,12 @@ jobs:
           MACOS_X64_LIB="$(find release-assets/macos-x64-binary -type f -name 'libtorrent-rasterbar.dylib' | head -n 1)"
           WINDOWS_X64_LIB="$(find release-assets/windows-x64-binary -type f -name 'torrent-rasterbar.dll' | head -n 1)"
           WINDOWS_ARM64_LIB="$(find release-assets/windows-arm64-binary -type f -name 'torrent-rasterbar.dll' | head -n 1)"
+          ANDROID_ARMV7_LIB="$(find release-assets/android-armeabi-v7a-binary -type f -name 'libtorrent-rasterbar.so' | head -n 1)"
           ANDROID_ARM64_LIB="$(find release-assets/android-arm64-v8a-binary -type f -name 'libtorrent-rasterbar.so' | head -n 1)"
           ANDROID_X64_LIB="$(find release-assets/android-x86_64-binary -type f -name 'libtorrent-rasterbar.so' | head -n 1)"
           IOS_LIB="$(find release-assets/ios-binary -type f -name '*.a' | head -n 1)"
 
-          if [ -z "$LINUX_X64_LIB" ] || [ -z "$LINUX_ARM64_LIB" ] || [ -z "$MACOS_ARM64_LIB" ] || [ -z "$MACOS_X64_LIB" ] || [ -z "$WINDOWS_X64_LIB" ] || [ -z "$WINDOWS_ARM64_LIB" ] || [ -z "$ANDROID_ARM64_LIB" ] || [ -z "$ANDROID_X64_LIB" ] || [ -z "$IOS_LIB" ]; then
+          if [ -z "$LINUX_X64_LIB" ] || [ -z "$LINUX_ARM64_LIB" ] || [ -z "$MACOS_ARM64_LIB" ] || [ -z "$MACOS_X64_LIB" ] || [ -z "$WINDOWS_X64_LIB" ] || [ -z "$WINDOWS_ARM64_LIB" ] || [ -z "$ANDROID_ARMV7_LIB" ] || [ -z "$ANDROID_ARM64_LIB" ] || [ -z "$ANDROID_X64_LIB" ] || [ -z "$IOS_LIB" ]; then
             echo "One or more release binaries were not found in downloaded artifacts" >&2
             exit 1
           fi
@@ -156,6 +159,7 @@ jobs:
           cp "$MACOS_X64_LIB" release-assets/macos-x64-libtorrent-rasterbar.dylib
           cp "$WINDOWS_X64_LIB" release-assets/windows-x64-torrent-rasterbar.dll
           cp "$WINDOWS_ARM64_LIB" release-assets/windows-arm64-torrent-rasterbar.dll
+          cp "$ANDROID_ARMV7_LIB" release-assets/android-armeabi-v7a-libtorrent-rasterbar.so
           cp "$ANDROID_ARM64_LIB" release-assets/android-arm64-v8a-libtorrent-rasterbar.so
           cp "$ANDROID_X64_LIB" release-assets/android-x86_64-libtorrent-rasterbar.so
           cp "$IOS_LIB" release-assets/ios-libtorrent-rasterbar.a
@@ -173,6 +177,7 @@ jobs:
               release-assets/macos-x64-libtorrent-rasterbar.dylib \
               release-assets/windows-x64-torrent-rasterbar.dll \
               release-assets/windows-arm64-torrent-rasterbar.dll \
+              release-assets/android-armeabi-v7a-libtorrent-rasterbar.so \
               release-assets/android-arm64-v8a-libtorrent-rasterbar.so \
               release-assets/android-x86_64-libtorrent-rasterbar.so \
               release-assets/ios-libtorrent-rasterbar.a \
@@ -185,6 +190,7 @@ jobs:
               release-assets/macos-x64-libtorrent-rasterbar.dylib \
               release-assets/windows-x64-torrent-rasterbar.dll \
               release-assets/windows-arm64-torrent-rasterbar.dll \
+              release-assets/android-armeabi-v7a-libtorrent-rasterbar.so \
               release-assets/android-arm64-v8a-libtorrent-rasterbar.so \
               release-assets/android-x86_64-libtorrent-rasterbar.so \
               release-assets/ios-libtorrent-rasterbar.a \

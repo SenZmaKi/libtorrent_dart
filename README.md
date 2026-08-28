@@ -30,7 +30,7 @@ Libtorrent API parity is tracked in:
 - Linux: ARM64 and x64.
 - macOS: Apple silicon and Intel.
 - Windows: ARM64 and x64.
-- Android: ARM64 and x64.
+- Android: ARMv7, ARM64, and x64.
 - iOS: ARM64 (build/link validated; runtime untested).
 
 ## Build

@@ -84,6 +84,7 @@ runs:
 
         BINARY="binaries/android/$VERSION/${{ inputs.abi }}/libtorrent-rasterbar.so"
         case "${{ inputs.abi }}" in
+          armeabi-v7a) ELF_MACHINE="ARM" ;;
           arm64-v8a) ELF_MACHINE="AArch64" ;;
           x86_64) ELF_MACHINE="Advanced Micro Devices X86-64" ;;
           *) echo "Unsupported Android ABI: ${{ inputs.abi }}" >&2; exit 64 ;;

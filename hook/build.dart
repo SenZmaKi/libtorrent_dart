@@ -108,6 +108,7 @@ void main(List<String> args) async {
 
 String _architectureDirectory(OS os, Architecture architecture) =>
     switch ((os, architecture)) {
+      (OS.android, Architecture.arm) => 'armeabi-v7a',
       (OS.android, Architecture.arm64) => 'arm64-v8a',
       (OS.android, Architecture.x64) => 'x86_64',
       (OS.macOS || OS.linux || OS.windows, Architecture.arm64) => 'arm64',

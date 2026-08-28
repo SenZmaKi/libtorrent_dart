@@ -68,6 +68,7 @@ output lands in `cmake_build/<preset-name>/` and binaries are written to
 | `macos-x64`   | macOS x64   | Ninja     | Intel runner and Homebrew dependencies               |
 | `windows-x64` | Windows x64 | Ninja     | Native x64 MSVC runner, static MSVC runtime           |
 | `windows-arm64` | Windows arm64 | Ninja | Native arm64 MSVC runner, static MSVC runtime         |
+| `android-armv7` | Android armeabi-v7a | Ninja | API 24, NDK toolchain, c++\_static, ccache       |
 | `android-arm64` | Android arm64-v8a | Ninja | API 24, NDK toolchain, c++\_static, ccache       |
 | `android-x64` | Android x86_64 | Ninja | API 24, NDK toolchain, c++\_static, ccache           |
 | `ios`         | iOS         | Xcode     | arm64, deployment target 13.0, bundled OpenSSL 3.4.1  |
@@ -152,7 +153,7 @@ independent x64 and arm64 output directories (pass `-Force` to rebuild).
 
 Output: `binaries/windows/<version>/<x64|arm64>/torrent-rasterbar.dll`
 
-## Android (NDK arm64-v8a and x86_64)
+## Android (NDK armeabi-v7a, arm64-v8a, and x86_64)
 
 Requires Android NDK 26.3.11579264 with `ANDROID_NDK_HOME` set.
 
@@ -163,8 +164,12 @@ VERSION="$(grep -E '^version:' pubspec.yaml | awk '{print $2}')"
 # Copy Boost to a non-system path: the NDK toolchain strips /usr/include
 mkdir -p /tmp/boost-include && cp -r /usr/include/boost /tmp/boost-include/
 BOOST_ROOT="/tmp/boost-include"
-for ABI in arm64-v8a x86_64; do
-  if [[ "$ABI" == "arm64-v8a" ]]; then PRESET="android-arm64"; else PRESET="android-x64"; fi
+for ABI in armeabi-v7a arm64-v8a x86_64; do
+  case "$ABI" in
+    armeabi-v7a) PRESET="android-armv7" ;;
+    arm64-v8a) PRESET="android-arm64" ;;
+    x86_64) PRESET="android-x64" ;;
+  esac
   bash scripts/build_openssl_android.sh 3.4.1 "$ABI"
   OPENSSL_ROOT="$PWD/thirdparty/openssl-android/$ABI"
 
@@ -187,7 +192,7 @@ done
 the requested ABI (`-D__ANDROID_API__=24`). It is idempotent; pass `--force`
 as the third argument to force a rebuild.
 
-Output: `binaries/android/<version>/<arm64-v8a|x86_64>/libtorrent-rasterbar.so`
+Output: `binaries/android/<version>/<armeabi-v7a|arm64-v8a|x86_64>/libtorrent-rasterbar.so`
 
 ## iOS (arm64)
 
@@ -237,7 +242,7 @@ dart test
 
 Triggered on every push to `main`, on pull requests, and on manual dispatch.
 Builds and tests Linux, macOS, and Windows on native x64 and arm64 runners.
-Android arm64-v8a and x86_64 cross-builds run through the Android composite
+Android armeabi-v7a, arm64-v8a, and x86_64 cross-builds run through the Android composite
 action; host Dart tests cannot load Android ELF binaries.
 
 Native and Android jobs share architecture-scoped caches between the Tests and
@@ -272,6 +277,7 @@ platforms in parallel (Linux, macOS, Windows, Android, iOS), then runs the
    | `macos-x64-libtorrent-rasterbar.dylib`        | macOS x64     |
    | `windows-x64-torrent-rasterbar.dll`           | Windows x64   |
    | `windows-arm64-torrent-rasterbar.dll`         | Windows arm64 |
+   | `android-armeabi-v7a-libtorrent-rasterbar.so` | Android ARMv7 |
    | `android-arm64-v8a-libtorrent-rasterbar.so`   | Android arm64 |
    | `android-x86_64-libtorrent-rasterbar.so`      | Android x64   |
    | `ios-libtorrent-rasterbar.a`                  | iOS arm64     |
