@@ -6,6 +6,11 @@ runs:
   steps:
     - name: Setup Dart SDK
       uses: dart-lang/setup-dart@v1
+      with:
+        # setup-dart resolves this matcher relative to a caller composite
+        # action, where the matcher file does not exist. Analysis still runs
+        # explicitly below.
+        problem-matcher: false
 
     - name: Cache Dart packages
       uses: actions/cache@v6
