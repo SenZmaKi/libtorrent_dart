@@ -38,3 +38,17 @@ Libtorrent API parity is tracked in:
 Build instructions for all supported platforms (macOS, Linux, Windows, Android, iOS) are in:
 
 - [BUILD.md](https://github.com/SenZmaKi/libtorrent_dart/blob/main/docs/BUILD.md)
+
+### Local streaming experiment
+
+The unreleased streaming bridge adds `TorrentHandle.pieceLength`, `numPieces`
+and `pieceSize`, plus `Session.popAlertInfo(includePieceData: true)`. The latter
+copies `read_piece_alert` data into owned Dart bytes and includes its piece index,
+torrent ID and native error code. Keep one alert consumer per session. Native
+reads are asynchronous; do not mix polling consumers that might consume each
+other's completions. The optional API requires rebuilding the matching native
+artifact; selecting this checkout with a Dart path dependency does not rebuild C++.
+
+The native bridge retains each popped alert batch until all its events have been
+consumed. Generic session settings supplied to creation are now applied before
+startup, including loopback listening and disabled discovery for controlled tests.

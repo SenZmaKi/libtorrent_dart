@@ -807,3 +807,36 @@ external int lt_create_torrent_data(
   int len,
   Pointer<Int32> requiredLen,
 );
+
+@Native<
+  Int32 Function(
+    Pointer<Void>,
+    Pointer<LtAlertInfoNative>,
+    Pointer<LtDhtSampleNative>,
+    Int32,
+    Pointer<Int32>,
+    Pointer<Int32>,
+    Pointer<Int32>,
+    Pointer<Pointer<Char>>,
+    Pointer<Int32>,
+  )
+>()
+external int session_pop_alert_with_piece(
+  Pointer<Void> session,
+  Pointer<LtAlertInfoNative> info,
+  Pointer<LtDhtSampleNative> samples,
+  int maxSamples,
+  Pointer<Int32> totalSamples,
+  Pointer<Int32> piece,
+  Pointer<Int32> error,
+  Pointer<Pointer<Char>> data,
+  Pointer<Int32> size,
+);
+@Native<Void Function(Pointer<Char>)>()
+external void lt_free_piece_buffer(Pointer<Char> buffer);
+@Native<Int32 Function(Int32)>()
+external int torrent_piece_length(int torrentId);
+@Native<Int32 Function(Int32)>()
+external int torrent_num_pieces(int torrentId);
+@Native<Int32 Function(Int32, Int32)>()
+external int torrent_piece_size(int torrentId, int piece);

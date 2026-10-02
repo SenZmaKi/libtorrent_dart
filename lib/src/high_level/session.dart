@@ -408,19 +408,37 @@ class Session {
     }
   }
 
-  AlertInfo? popAlertInfo() {
+  /// Set [includePieceData] to receive copied read_piece_alert payloads.
+  /// Requires a native bridge built with the streaming API.
+  AlertInfo? popAlertInfo({bool includePieceData = false}) {
     final info = calloc<ffi.LtAlertInfoNative>();
+    final piece = calloc<Int32>()..value = -1;
+    final pieceError = calloc<Int32>();
+    final pieceData = calloc<Pointer<Char>>();
+    final pieceSize = calloc<Int32>();
     const maxSamples = 256;
     final samples = calloc<ffi.LtDhtSampleNative>(maxSamples);
     final totalSamples = calloc<Int32>();
     try {
-      final rc = ffi.session_pop_alert_typed(
-        _handle,
-        info,
-        samples,
-        maxSamples,
-        totalSamples,
-      );
+      final rc = includePieceData
+          ? ffi.session_pop_alert_with_piece(
+              _handle,
+              info,
+              samples,
+              maxSamples,
+              totalSamples,
+              piece,
+              pieceError,
+              pieceData,
+              pieceSize,
+            )
+          : ffi.session_pop_alert_typed(
+              _handle,
+              info,
+              samples,
+              maxSamples,
+              totalSamples,
+            );
       if (rc < 0) return null;
       final sampleCount = totalSamples.value < maxSamples
           ? totalSamples.value
@@ -449,6 +467,13 @@ class Session {
         what: ffi.int8ArrayToString(info.ref.what, 64),
         message: ffi.int8ArrayToString(info.ref.message, 1024),
         torrentId: torrentId,
+        pieceIndex: piece.value < 0 ? null : piece.value,
+        pieceError: pieceError.value,
+        pieceData: pieceData.value == nullptr
+            ? null
+            : Uint8List.fromList(
+                pieceData.value.cast<Uint8>().asTypedList(pieceSize.value),
+              ),
         dhtEndpointAddress: endpointAddress.isEmpty ? null : endpointAddress,
         dhtEndpointPort: endpointPort,
         dhtSamples: dhtSamples,
@@ -457,6 +482,11 @@ class Session {
       calloc.free(info);
       calloc.free(samples);
       calloc.free(totalSamples);
+      if (pieceData.value != nullptr) ffi.lt_free_piece_buffer(pieceData.value);
+      calloc.free(piece);
+      calloc.free(pieceError);
+      calloc.free(pieceData);
+      calloc.free(pieceSize);
     }
   }
 

@@ -1,3 +1,11 @@
+## Unreleased
+
+- Preserve complete native alert batches across all alert pop variants and DHT convenience reads.
+- Expose optional owned `read_piece_alert` bytes, piece index/error and correct torrent identity.
+- Add torrent piece length, count and actual piece-size accessors.
+- Apply generic settings supplied to session creation; expose DHT/LSD/UPnP/NAT-PMP setting identifiers.
+- Add the streaming read/layout regression contract in unit and integration suites.
+
 ## 1.0.1
 
 - Add Android ARMv7 (`armeabi-v7a`) native binary support.

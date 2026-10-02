@@ -36,6 +36,9 @@ class AlertInfo {
     required this.what,
     required this.message,
     this.torrentId,
+    this.pieceIndex,
+    this.pieceData,
+    this.pieceError = 0,
     this.dhtEndpointAddress,
     this.dhtEndpointPort,
     this.dhtSamples = const <DhtSampleInfohash>[],
@@ -55,6 +58,15 @@ class AlertInfo {
 
   /// The related torrent identifier, when applicable.
   final int? torrentId;
+
+  /// Piece index for read_piece_alert, absent on other alert types.
+  final int? pieceIndex;
+
+  /// Owned copy of the read piece, safe after subsequent alert pops.
+  final Uint8List? pieceData;
+
+  /// Native error code for a failed read_piece_alert.
+  final int pieceError;
 
   /// The related DHT endpoint address, when applicable.
   final String? dhtEndpointAddress;

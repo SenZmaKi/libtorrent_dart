@@ -9,6 +9,8 @@ class LibtorrentSettingsTag {
   static const int proxyUsername = 0x0000 + 7;
   static const int proxyPassword = 0x0000 + 8;
 
+  static const int minReconnectTime = 0x4000 + 16;
+
   static const int activeDownloads = 0x4000 + 41;
   static const int activeSeeds = 0x4000 + 42;
   static const int activeLimit = 0x4000 + 47;
@@ -27,12 +29,18 @@ class LibtorrentSettingsTag {
   static const int proxyPort = 0x4000 + 124;
   static const int alertMask = 0x4000 + 260;
 
+  static const int closeRedundantConnections = 0x8000 + 14;
+
   static const int autoManagePreferSeeds = 0x8000 + 12;
   static const int enableOutgoingUtp = 0x8000 + 32;
   static const int enableIncomingUtp = 0x8000 + 33;
   static const int enableOutgoingTcp = 0x8000 + 34;
   static const int enableIncomingTcp = 0x8000 + 35;
   static const int anonymousMode = 0x8000 + 38;
+  static const int enableUpnp = 0x8000 + 59;
+  static const int enableNatpmp = 0x8000 + 60;
+  static const int enableLsd = 0x8000 + 61;
+  static const int enableDht = 0x8000 + 62;
 }
 
 /// Numeric value types accepted by libtorrent settings.

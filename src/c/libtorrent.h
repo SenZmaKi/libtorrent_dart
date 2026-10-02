@@ -406,6 +406,15 @@ LTD_API int session_pop_alert(void *ses, char *dest, int len, int *category);
 LTD_API int session_pop_alert_info(void *ses, int *type, int *category,
                                    char *what_dest, int what_len,
                                    char *message_dest, int message_len);
+// piece_data is an owned copy; release it with lt_free_piece_buffer.
+LTD_API int session_pop_alert_with_piece(void *ses, struct lt_alert_info *info,
+    struct lt_dht_sample *samples, int max_samples, int *total_samples,
+    int *piece, int *piece_error, char **piece_data, int *piece_size);
+LTD_API void lt_free_piece_buffer(char *buffer);
+LTD_API int torrent_piece_length(int tor);
+LTD_API int torrent_num_pieces(int tor);
+LTD_API int torrent_piece_size(int tor, int piece);
+
 LTD_API int session_pop_alert_typed(void *ses, struct lt_alert_info *info,
                                     struct lt_dht_sample *samples,
                                     int max_samples, int *total_samples);

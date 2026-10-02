@@ -123,6 +123,26 @@ class TorrentHandle {
     }
   }
 
+  /// Torrent-wide nominal piece length. Metadata must be available.
+  int get pieceLength {
+    final value = ffi.torrent_piece_length(id);
+    if (value < 0) _throwLastError('Failed to read piece length');
+    return value;
+  }
+
+  int get numPieces {
+    final value = ffi.torrent_num_pieces(id);
+    if (value < 0) _throwLastError('Failed to read piece count');
+    return value;
+  }
+
+  /// Actual size of a piece, including shortened final/v2 file pieces.
+  int pieceSize(int piece) {
+    final value = ffi.torrent_piece_size(id, piece);
+    if (value < 0) _throwLastError('Failed to read piece size');
+    return value;
+  }
+
   void readPiece(int piece) {
     if (ffi.torrent_read_piece(id, piece) != 0) {
       _throwLastError('Failed to read piece');

@@ -56,6 +56,9 @@ POSSIBILITY OF SUCH DAMAGE.
 #include <exception>
 #include <libtorrent.h>
 #include <new>
+#include <deque>
+#include <map>
+#include <cstdlib>
 #include <set>
 #include <stdarg.h>
 #include <string>
@@ -75,6 +78,22 @@ POSSIBILITY OF SUCH DAMAGE.
 
 namespace {
 std::vector<lt::torrent_handle> handles;
+
+// Native alert pointers stay valid until the next pop_alerts call. Drain the
+// retained batch before asking libtorrent for another one. All pop APIs share it.
+std::map<lt::session *, std::deque<lt::alert *>> pending_alerts;
+lt::alert *next_alert(lt::session *s) {
+  auto &pending = pending_alerts[s];
+  if (pending.empty()) {
+    std::vector<lt::alert *> batch;
+    s->pop_alerts(&batch);
+    pending.insert(pending.end(), batch.begin(), batch.end());
+  }
+  if (pending.empty()) return nullptr;
+  auto *a = pending.front();
+  pending.pop_front();
+  return a;
+}
 
 struct progress_callback_entry {
   torrent_progress_callback cb;
@@ -731,6 +750,11 @@ TORRENT_EXPORT void *session_create_items(lt_tag_item const *items,
       pack.set_str(settings_pack::listen_interfaces, buf);
     }
 
+    if (apply_session_setting_pack_items(pack, items, num_items) != 0) {
+      set_last_error(-1, "invalid session settings items");
+      return nullptr;
+    }
+
     session *ret = new (std::nothrow) session(session_params(pack));
     if (ret == nullptr)
       set_last_error(-1, "failed to allocate session");
@@ -744,7 +768,10 @@ TORRENT_EXPORT void *session_create_items(lt_tag_item const *items,
   }
 }
 
-TORRENT_EXPORT void session_close(void *ses) { delete (lt::session *)ses; }
+TORRENT_EXPORT void session_close(void *ses) {
+  pending_alerts.erase(static_cast<lt::session *>(ses));
+  delete static_cast<lt::session *>(ses);
+}
 
 TORRENT_EXPORT int session_add_torrent(void *ses, int tag, ...) {
   clear_last_error();
@@ -1001,12 +1028,8 @@ TORRENT_EXPORT int session_pop_alert(void *ses, char *dest, int len,
       set_last_error(-1, "invalid pop_alert arguments");
       return -1;
     }
-    std::vector<alert *> alerts;
-    s->pop_alerts(&alerts);
-    if (alerts.empty())
-      return -1;
-
-    alert *a = alerts.front();
+    alert *a = next_alert(s);
+    if (!a) return -1;
     if (category)
       *category = a->category();
     strncpy(dest, a->message().c_str(), len - 1);
@@ -1034,11 +1057,8 @@ TORRENT_EXPORT int session_pop_alert_info(void *ses, int *type, int *category,
       set_last_error(-1, "invalid pop_alert_info arguments");
       return -1;
     }
-    std::vector<alert *> alerts;
-    s->pop_alerts(&alerts);
-    if (alerts.empty())
-      return -1;
-    alert *a = alerts.front();
+    alert *a = next_alert(s);
+    if (!a) return -1;
     if (type)
       *type = a->type();
     if (category)
@@ -1058,10 +1078,11 @@ TORRENT_EXPORT int session_pop_alert_info(void *ses, int *type, int *category,
   }
 }
 
-TORRENT_EXPORT int session_pop_alert_typed(void *ses, lt_alert_info *info,
+TORRENT_EXPORT int session_pop_alert_with_piece(void *ses, lt_alert_info *info,
                                            lt_dht_sample *samples,
                                            int max_samples,
-                                           int *total_samples) {
+                                           int *total_samples, int *piece, int *piece_error,
+                                           char **piece_data, int *piece_size) {
   clear_last_error();
   try {
     using namespace lt;
@@ -1070,28 +1091,41 @@ TORRENT_EXPORT int session_pop_alert_typed(void *ses, lt_alert_info *info,
       set_last_error(-1, "invalid pop_alert_typed arguments");
       return -1;
     }
-    std::vector<alert *> alerts;
-    s->pop_alerts(&alerts);
-    if (alerts.empty())
-      return -1;
+    if (piece) *piece = -1;
+    if (piece_error) *piece_error = 0;
+    if (piece_data) *piece_data = nullptr;
+    if (piece_size) *piece_size = 0;
+    alert *a = next_alert(s);
+    if (!a) return -1;
 
     std::memset(info, 0, sizeof(lt_alert_info));
     info->torrent_id = -1;
     if (total_samples)
       *total_samples = 0;
 
-    alert *a = alerts.front();
     info->type = a->type();
     info->category = a->category();
     std::strncpy(info->what, a->what(), sizeof(info->what) - 1);
     std::strncpy(info->message, a->message().c_str(), sizeof(info->message) - 1);
 
-    if (auto *ta = lt::alert_cast<lt::torrent_alert>(a)) {
+    if (auto *ta = dynamic_cast<lt::torrent_alert *>(a)) {
       if (ta->handle.is_valid()) {
         int id = find_handle(ta->handle);
         if (id == -1)
           id = add_handle(ta->handle);
         info->torrent_id = id;
+      }
+    }
+
+    if (auto *ra = lt::alert_cast<lt::read_piece_alert>(a)) {
+      if (piece) *piece = static_cast<int>(ra->piece);
+      if (piece_error) *piece_error = ra->error.value();
+      if (piece_data && piece_size && !ra->error && ra->buffer && ra->size > 0) {
+        auto *copy = static_cast<char *>(std::malloc(ra->size));
+        if (!copy) throw std::bad_alloc();
+        std::memcpy(copy, ra->buffer.get(), ra->size);
+        *piece_data = copy;
+        *piece_size = ra->size;
       }
     }
 
@@ -1129,6 +1163,43 @@ TORRENT_EXPORT int session_pop_alert_typed(void *ses, lt_alert_info *info,
   }
 }
 
+TORRENT_EXPORT int session_pop_alert_typed(void *ses, lt_alert_info *info,
+    lt_dht_sample *samples, int max_samples, int *total_samples) {
+  return session_pop_alert_with_piece(ses, info, samples, max_samples,
+      total_samples, nullptr, nullptr, nullptr, nullptr);
+}
+TORRENT_EXPORT void lt_free_piece_buffer(char *buffer) { std::free(buffer); }
+
+TORRENT_EXPORT int torrent_piece_length(int tor) {
+  clear_last_error();
+  try {
+    auto h = get_handle(tor);
+    auto ti = h.is_valid() ? h.torrent_file() : nullptr;
+    if (!ti) { set_last_error(-1, "torrent metadata unavailable"); return -1; }
+    return ti->piece_length();
+  } catch (std::exception const &e) { set_last_error(-1, e.what()); return -1; }
+}
+TORRENT_EXPORT int torrent_num_pieces(int tor) {
+  clear_last_error();
+  try {
+    auto h = get_handle(tor);
+    auto ti = h.is_valid() ? h.torrent_file() : nullptr;
+    if (!ti) { set_last_error(-1, "torrent metadata unavailable"); return -1; }
+    return ti->num_pieces();
+  } catch (std::exception const &e) { set_last_error(-1, e.what()); return -1; }
+}
+TORRENT_EXPORT int torrent_piece_size(int tor, int piece) {
+  clear_last_error();
+  try {
+    auto h = get_handle(tor);
+    auto ti = h.is_valid() ? h.torrent_file() : nullptr;
+    if (!ti || piece < 0 || piece >= ti->num_pieces()) {
+      set_last_error(-1, "invalid piece or metadata unavailable"); return -1;
+    }
+    return ti->piece_size(lt::piece_index_t(piece));
+  } catch (std::exception const &e) { set_last_error(-1, e.what()); return -1; }
+}
+
 TORRENT_EXPORT int session_wait_for_alert(void *ses, int max_wait_ms, char *dest,
                                           int len, int *category) {
   clear_last_error();
@@ -1139,7 +1210,8 @@ TORRENT_EXPORT int session_wait_for_alert(void *ses, int max_wait_ms, char *dest
       set_last_error(-1, "invalid wait_for_alert arguments");
       return -1;
     }
-    alert *a = s->wait_for_alert(lt::milliseconds(max_wait_ms));
+    auto &pending = pending_alerts[s];
+    alert *a = pending.empty() ? s->wait_for_alert(lt::milliseconds(max_wait_ms)) : pending.front();
     if (!a)
       return -1;
     if (category)
@@ -1754,12 +1826,16 @@ TORRENT_EXPORT int session_dht_sample_infohashes(void *ses, char const *address,
     }
     s->dht_sample_infohashes(lt::udp::endpoint(addr, port), target);
 
-    std::vector<lt::alert *> alerts;
-    s->pop_alerts(&alerts);
-    for (lt::alert *a : alerts) {
-      auto *sample_alert = lt::alert_cast<lt::dht_sample_infohashes_alert>(a);
-      if (!sample_alert)
-        continue;
+    auto &pending = pending_alerts[s];
+    if (pending.empty()) {
+      std::vector<lt::alert *> batch;
+      s->pop_alerts(&batch);
+      pending.insert(pending.end(), batch.begin(), batch.end());
+    }
+    for (auto it = pending.begin(); it != pending.end(); ++it) {
+      auto *sample_alert = lt::alert_cast<lt::dht_sample_infohashes_alert>(*it);
+      if (!sample_alert) continue;
+      pending.erase(it);
       std::vector<lt::sha1_hash> sample_hashes = sample_alert->samples();
       *total_samples = static_cast<int>(sample_hashes.size());
       if (!samples || max_samples == 0)
