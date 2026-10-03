@@ -1,4 +1,4 @@
-## Unreleased
+## 1.1.0
 
 - Preserve complete native alert batches across all alert pop variants and DHT convenience reads.
 - Expose optional owned `read_piece_alert` bytes, piece index/error and correct torrent identity.
