@@ -1,3 +1,10 @@
+## Unreleased
+
+- Download native assets directly from GitHub release URLs instead of the unauthenticated release API.
+- Log HTTP failures and redirects; report missing redirect locations, unsupported responses, redirect limits, and empty downloads.
+- Serialize native test suites because bridge registries are shared across isolates, and expand CI test output.
+- Refresh documentation and API parity counts for the 1.1.0 binding surface.
+
 ## 1.1.0
 
 - Preserve complete native alert batches across all alert pop variants and DHT convenience reads.

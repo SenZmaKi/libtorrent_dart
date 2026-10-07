@@ -1,10 +1,14 @@
 # Publishing to pub.dev
 
 GitHub Releases are the source of the package's native assets. The release
-workflow therefore publishes all nine GitHub assets before its `publish-pub`
+workflow therefore publishes all ten GitHub native assets before its `publish-pub`
 job publishes the Dart package.
 
-## One-time first publication
+Version 1.1.0 includes the piece-layout and owned piece-read APIs. Each release
+must supply matching native artifacts; changing only the Dart dependency does
+not rebuild the C++ bridge. See [BUILD.md](BUILD.md) for the asset matrix.
+
+## Historical first publication (0.4.1)
 
 pub.dev requires the first version of a new package to be published by an
 authenticated Google account. Publish the exact `v0.4.1` tag from a Git archive
@@ -27,6 +31,9 @@ browser for Google authentication and asks for confirmation before uploading.
 Do not copy the local pub credential into GitHub Actions.
 
 ## Enable GitHub Actions publishing
+
+Automated publishing is already configured for this repository. The following
+steps document the setup for recovery or a new publisher/repository.
 
 After `0.4.1` appears on pub.dev:
 

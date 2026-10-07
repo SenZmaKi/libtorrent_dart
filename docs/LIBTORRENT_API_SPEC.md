@@ -2,7 +2,13 @@
 
 **Version**: libtorrent 2.0.11 (commit: 163d36465)  
 **Repository**: https://github.com/arvidn/libtorrent  
-**Purpose**: Complete public API reference for achieving parity with libtorrent_dart
+**Purpose**: Upstream API reference inventory for assessing libtorrent_dart parity
+
+This document describes the upstream baseline, not the supported Dart API.
+The vendored commit reports version 2.0.11 and is described by Git as
+`v2.0.11-136-g163d36465`; it is not the exact `v2.0.11` release tag.
+See [LIBTORRENT_API_PARITY.md](LIBTORRENT_API_PARITY.md) for the current
+1.1.0 binding coverage and verification limits.
 
 ---
 

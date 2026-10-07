@@ -214,4 +214,7 @@ runs:
 
     - name: Test
       shell: bash
-      run: dart test
+      # dart_test.yaml keeps suites serial: the native bridge registries are
+      # shared across isolates. Expanded output identifies the active test if
+      # the native process crashes before the test runner can report a failure.
+      run: dart test --reporter expanded

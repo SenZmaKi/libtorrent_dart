@@ -1,0 +1,4 @@
+# Suites run in separate isolates but share the C bridge's process-wide handle,
+# callback and pending-alert registries. Those registries are not synchronized.
+# Keep native suites serial on every platform, including Windows ARM64.
+concurrency: 1

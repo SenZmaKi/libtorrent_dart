@@ -1,9 +1,10 @@
 import 'dart:io';
-import 'dart:convert';
 
 import 'package:code_assets/code_assets.dart';
 import 'package:hooks/hooks.dart';
 import 'package:yaml/yaml.dart';
+
+import 'download.dart';
 
 const _defaultReleaseRepo = 'SenZmaKi/libtorrent_dart';
 
@@ -144,109 +145,9 @@ Future<void> _downloadReleaseBinary(
 ) async {
   final repo =
       Platform.environment['LTD_RELEASE_REPOSITORY'] ?? _defaultReleaseRepo;
-  final candidateTags = <String>[releaseTag, 'v$releaseTag'];
-
-  final client = HttpClient();
-  client.userAgent = 'libtorrent_dart_hook';
-  try {
-    stdout.writeln('---------------------------------------------------------');
-    stdout.writeln('Native binary missing: ${destination.path}');
-    stdout.writeln(
-      'Attempting to download $assetName from $repo (tag: $releaseTag)...',
-    );
-    stdout.writeln('---------------------------------------------------------');
-
-    Map<String, Object?>? selectedAsset;
-    for (final tag in candidateTags) {
-      final releaseApi = Uri.https(
-        'api.github.com',
-        '/repos/$repo/releases/tags/$tag',
-      );
-      final releaseRes = await _getWithRedirects(client, releaseApi);
-      if (releaseRes.statusCode != 200) continue;
-
-      final releaseBody = await utf8.decodeStream(releaseRes);
-      final releaseJson = jsonDecode(releaseBody) as Map<String, Object?>;
-      final assets = (releaseJson['assets'] as List<Object?>?) ?? const [];
-      for (final asset in assets) {
-        final map = asset as Map<String, Object?>;
-        if (map['name'] == assetName) {
-          selectedAsset = map;
-          break;
-        }
-      }
-      if (selectedAsset != null) {
-        break;
-      }
-    }
-    if (selectedAsset == null) return;
-
-    final downloadUrl = selectedAsset['browser_download_url'] as String?;
-    if (downloadUrl == null || downloadUrl.isEmpty) return;
-
-    destination.parent.createSync(recursive: true);
-    stdout.write('Downloading $assetName... ');
-    final assetRes = await _getWithRedirects(client, Uri.parse(downloadUrl));
-    if (assetRes.statusCode != 200) {
-      stdout.writeln('Failed (HTTP ${assetRes.statusCode}).');
-      return;
-    }
-
-    final tempFile = File('${destination.path}.tmp');
-    if (tempFile.existsSync()) {
-      try {
-        tempFile.deleteSync();
-      } catch (_) {
-        // If Windows still has a lock from a previous failed run,
-        // we might need to wait or manual intervention is required.
-      }
-    }
-
-    try {
-      final sink = tempFile.openWrite();
-      await sink.addStream(assetRes);
-      await sink.close(); // Ensure the file handle is released
-
-      if (destination.existsSync()) destination.deleteSync();
-      tempFile.renameSync(destination.path);
-      stdout.writeln('Done.');
-    } catch (_) {
-      if (tempFile.existsSync()) {
-        try {
-          tempFile.deleteSync();
-        } catch (_) {
-          // Swallow cleanup errors to avoid masking the primary exception
-        }
-      }
-      rethrow;
-    }
-  } finally {
-    client.close(force: true);
-  }
-}
-
-Future<HttpClientResponse> _getWithRedirects(
-  HttpClient client,
-  Uri uri, {
-  int maxRedirects = 8,
-}) async {
-  Uri current = uri;
-  for (var i = 0; i <= maxRedirects; i++) {
-    final req = await client.getUrl(current);
-    req.followRedirects = false;
-    final res = await req.close();
-    switch (res.statusCode) {
-      case HttpStatus.movedPermanently:
-      case HttpStatus.found:
-      case HttpStatus.seeOther:
-      case HttpStatus.temporaryRedirect:
-      case HttpStatus.permanentRedirect:
-        final location = res.headers.value(HttpHeaders.locationHeader);
-        if (location == null || location.isEmpty) return res;
-        current = current.resolve(location);
-      default:
-        return res;
-    }
-  }
-  throw StateError('Too many redirects while downloading $uri');
+  stdout.writeln('Native binary missing: ${destination.path}');
+  await downloadBinary(
+    destination,
+    releaseAssetUrls(repo, releaseTag, assetName),
+  );
 }

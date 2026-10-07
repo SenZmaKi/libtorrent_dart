@@ -16,5 +16,6 @@ mobile_test/
 scripts/
 /src/
 test/
+dart_test.yaml
 thirdparty/
 tool/

@@ -30,7 +30,14 @@ When building manually, pass `-DLTD_BINARY_LAYOUT_VERSION=<package-version>` so
 the output path matches what the hook will load.
 
 If the binary is not found locally, the hook automatically attempts to download
-it from the matching GitHub release. This behaviour can be overridden with two
+it directly from `https://github.com/<repository>/releases/download/v<version>/<asset>`.
+It does not query the GitHub release API. Unprefixed tags are tried only after
+a 404 for the prefixed tag; an explicit tag beginning with `v` is used as-is.
+The hook follows HTTP 301/302/303/307/308 redirects (up to eight hops), logs
+redirects and non-success responses, and reports missing redirect locations,
+unsupported redirects, and download failures as errors. Downloads are saved
+through a temporary file so failed transfers do not become native assets.
+This behaviour can be overridden with two
 environment variables:
 
 | Variable                 | Purpose                                                              |
@@ -118,8 +125,9 @@ universal application binary.
 
 ## Windows (MSVC)
 
-**Requirements:** Visual Studio 2022 with the C++ workload. Run all commands
-from a **VS x64 Developer Command Prompt** (or after `ilammy/msvc-dev-cmd`).
+**Requirements:** Visual Studio with the C++ workload and tools for the target
+architecture. Run commands from a matching **VS x64 or ARM64 Developer Command
+Prompt** (or after `ilammy/msvc-dev-cmd`).
 MinGW / LLVM-MinGW are not supported.
 
 ```powershell
@@ -234,7 +242,20 @@ contains more than two members, contains arm64 code, exports `lt_version` and
 dart pub get
 dart analyze
 dart test
+dart test integration_test/streaming_test.dart
+dart test integration_test/build_hook_download_test.dart
 ```
+
+The root `dart_test.yaml` sets suite concurrency to one because separate test
+isolates share unsynchronized native handle, callback, and pending-alert
+registries. This applies to both desktop unit tests and the standalone Dart
+streaming integration contract. Flutter/device integration tests are under
+`mobile_test/integration_test/`; they require a matching Flutter device and
+are not run by the native build workflow.
+
+After changing `src/c/`, rebuild the versioned native binary before running
+these checks. The build hook uses an existing local binary or downloads a
+release artifact; it does not compile C++ for a path dependency.
 
 ## CI / CD
 

@@ -3,9 +3,10 @@
 This document compares the holistic C++ API described in
 `docs/LIBTORRENT_API_SPEC.md` against the current `libtorrent_dart` port.
 
-- **Snapshot date**: 2026-08-25
-- **libtorrent baseline**: 2.0.11, commit `163d36465`
-- **libtorrent_dart snapshot**: 0.4.5 development tree
+- **Snapshot date**: 2026-10-07
+- **libtorrent baseline**: vendored commit `163d36465` (reports 2.0.11;
+  Git describes it as `v2.0.11-136-g163d36465`)
+- **libtorrent_dart snapshot**: 1.1.0 source tree
 
 ## How this comparison was done
 
@@ -18,8 +19,11 @@ This document compares the holistic C++ API described in
   - C functions are unique `LTD_API` function declarations, excluding the two
     platform-specific `LTD_API` macro definitions.
   - FFI functions are Dart `external` declarations annotated with `@Native`.
-  - Counts describe the C bridge surface, not one-to-one holistic C++ parity;
+- Counts describe the C bridge surface, not one-to-one holistic C++ parity;
     one bridge function may simplify or combine several C++ concepts.
+- The spec is an upstream reference inventory, not a list of supported Dart
+  APIs. Coverage below is based on the current bridge and wrapper source;
+  “migrated” does not imply exhaustive behavior testing on every platform.
 
 Legend:
 
@@ -37,8 +41,8 @@ Legend:
   - **Advanced C++ objects and ecosystems** (full `settings_pack`, `file_storage`, full alert type hierarchy, peer class management, port mapping APIs, IP/port filters, BEP52-rich data structures, many utility/header domains): not migrated.
 - Quantitatively (surface size only):
   - `docs/LIBTORRENT_API_SPEC.md`: documents **272 headers** and a holistic API.
-  - `src/c/libtorrent.h`: **146 exported C shim functions**.
-  - `lib/src/ffi/native_functions.dart`: **139 FFI extern bindings**.
+  - `src/c/libtorrent.h`: **151 exported C shim functions**.
+  - `lib/src/ffi/native_functions.dart`: **144 FFI extern bindings**.
   - The seven C functions without direct Dart externs are legacy or variadic
     entry points superseded by typed bridge functions:
     `session_create`, `session_add_torrent`, `session_set_settings`,
@@ -87,6 +91,8 @@ Legend:
   - typed int, bool, and string get/set helpers
   - tag-item batch settings through `setSettingsFromTags` and
     `applySettingsFromTags`
+  - generic settings passed to session creation are applied before startup
+    (including listen interfaces and discovery toggles)
 - Session state serialization:
   - `getState(flags)` and restore-from-state constructor
 
@@ -118,6 +124,9 @@ Legend:
   - `getStatus`, `postDownloadQueue`, `postPeerInfo`, `postTrackers`
 - Piece operations:
   - `havePiece`, `readPiece`, `addPiece`
+  - metadata-dependent layout: `pieceLength`, `numPieces`, `pieceSize(piece)`
+    (actual piece size, including shortened final/v2 file pieces)
+  - asynchronous read results through `popAlertInfo(includePieceData: true)`
 - Resume data:
   - `saveResumeData`, `getResumeData`, `needSaveResumeData`
 - Control:
@@ -173,6 +182,11 @@ Legend:
 - Typed alert bridge with:
   - `type`, `category`, `what`, `message`, `torrentId`
   - DHT sample payload extraction (`dhtSamples`, endpoint host/port).
+  - `read_piece_alert` fields: `pieceIndex`, `pieceError`, and optional owned
+    `Uint8List` bytes in `pieceData`; copies survive later native alert pops.
+- All pop variants and DHT convenience reads share a retained native alert
+  batch, draining it before calling libtorrent's `pop_alerts` again.
+  Use one alert consumer per session so consumers do not steal completions.
 
 ### Partially migrated
 
@@ -227,6 +241,8 @@ Legend:
 - Read-only runtime-ish file data from a torrent via shim:
   - file progress, open file status, file entries (`index/size/offset/flags/path`).
 - Storage mode constants exist (`LibtorrentStorageMode` allocate/sparse).
+- Torrent piece layout is available through `TorrentHandle`, without exposing
+  a first-class `file_storage` or `torrent_info` object.
 
 ### Partially migrated
 
@@ -411,7 +427,7 @@ The spec’s header inventory spans many domains. Current port status by domain:
 - **DHT**: **Partially migrated** (core operational subset).
 - **Hashing & Cryptography**: **Mostly not migrated**.
 - **Data Encoding**: **Mostly not migrated**.
-- **Piece Management**: **Partially migrated** (piece read/add/have/priorities/deadlines).
+- **Piece Management**: **Partially migrated** (layout, owned asynchronous read results, add/have/priorities/deadlines).
 - **Utilities & Support**: **Partially migrated** (selected helpers only).
 - **Extensions**: **Not migrated**.
 
@@ -425,6 +441,27 @@ If your target is:
 - **Holistic libtorrent C++ API parity** (all objects/enums/settings/headers and rich typed semantics): current port is **far from complete** and would need significant shim + Dart surface expansion.
 
 ## Keeping this document current
+
+### Verification and concurrency limits
+
+- Desktop unit suites cover FFI calls, session/torrent controls, and local
+  torrent-file workflows. Mobile integration counterparts live under
+  `mobile_test/integration_test/`.
+- `test/libtorrent_dart_streaming_test.dart` and
+  `integration_test/streaming_test.dart` register the same shared contract:
+  piece layout, complete alert-batch delivery, torrent identity, native read
+  errors, and byte ownership after later pops. It reads a locally created
+  torrent; it does not measure peer download speed or player startup.
+- Desktop CI builds and runs Dart tests on native x64/ARM64 runners. Android
+  coverage is build/binary inspection; iOS coverage is archive inspection and
+  native consumer linking, with runtime untested.
+- Native handle, callback, and pending-alert registries are process-wide and
+  unsynchronized. Use one owning isolate/thread for bridge calls and one alert
+  consumer per session. `dart_test.yaml` serializes test suites accordingly.
+- This binding supplies streaming primitives, not an HTTP Range server,
+  playback scheduler, or a bounded streaming cache.
+
+### Updating the snapshot
 
 Update this file whenever a change adds or removes public functions in
 `src/c/libtorrent.h`, `lib/src/ffi/native_functions.dart`, or the exported
