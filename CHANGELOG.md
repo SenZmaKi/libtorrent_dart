@@ -1,7 +1,8 @@
-## Unreleased
+## 1.1.1
 
 - Download native assets directly from GitHub release URLs instead of the unauthenticated release API.
 - Log HTTP failures and redirects; report missing redirect locations, unsupported responses, redirect limits, and empty downloads.
+- Close sessions before their abort proxies in unit and integration tests so native threads finish before process exit.
 - Serialize native test suites because bridge registries are shared across isolates, and expand CI test output.
 - Refresh documentation and API parity counts for the 1.1.0 binding surface.
 

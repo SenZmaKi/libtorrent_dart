@@ -6,7 +6,7 @@ This document compares the holistic C++ API described in
 - **Snapshot date**: 2026-10-07
 - **libtorrent baseline**: vendored commit `163d36465` (reports 2.0.11;
   Git describes it as `v2.0.11-136-g163d36465`)
-- **libtorrent_dart snapshot**: 1.1.0 source tree
+- **libtorrent_dart snapshot**: 1.1.1 source tree
 
 ## How this comparison was done
 
