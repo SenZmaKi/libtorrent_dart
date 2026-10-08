@@ -2,7 +2,7 @@ import 'dart:io';
 
 import 'package:test/test.dart';
 
-import '../../hook/download.dart';
+import 'package:libtorrent_dart/src/native_download.dart';
 
 void registerDownloadContract() {
   test('release URLs prefer v tags without duplicating the prefix', () {

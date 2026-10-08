@@ -1,3 +1,8 @@
+## 1.1.2
+
+- Move the native-download helper outside `hook/` so pub.dev accepts the package.
+- Include the native-download fixes and session shutdown test cleanup from 1.1.1, whose pub.dev publication was rejected.
+
 ## 1.1.1
 
 - Download native assets directly from GitHub release URLs instead of the unauthenticated release API.

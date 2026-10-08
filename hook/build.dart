@@ -4,7 +4,7 @@ import 'package:code_assets/code_assets.dart';
 import 'package:hooks/hooks.dart';
 import 'package:yaml/yaml.dart';
 
-import 'download.dart';
+import 'package:libtorrent_dart/src/native_download.dart';
 
 const _defaultReleaseRepo = 'SenZmaKi/libtorrent_dart';
 
