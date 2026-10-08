@@ -285,6 +285,8 @@ void main() {
       LibtorrentTagItem.stringValue(LibtorrentTag.torSavePath, '/tmp'),
     ]);
     final proxy = session.abort();
+    // abort() transfers shutdown waiting to the proxy; close the session first.
+    session.close();
     proxy.close();
   });
 
