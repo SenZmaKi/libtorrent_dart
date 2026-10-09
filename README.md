@@ -96,3 +96,15 @@ Cancel progress subscriptions before removing torrents or closing sessions.
 analyzes, and runs the Dart tests on x64 and ARM64. Android CI verifies native
 builds; iOS CI verifies its archive and a native consumer link. These checks
 do not establish mobile runtime behavior or public-swarm playback performance.
+
+## Bulk piece availability (unreleased)
+
+`TorrentHandle.getPieces()` copies the native `torrent_status::pieces` snapshot
+into an owned `Uint8List`, with one 0/1 byte per piece. Values represent
+hash-verified availability, not partially received blocks. Modifying the array
+cannot change the torrent. The raw `torrent_get_pieces` C/FFI API supports a
+size query with a null buffer and rejects undersized output buffers.
+
+This addition requires rebuilding the native bridge. Published 1.1.2 binaries
+do not contain the new symbol. A path dependency alone does not rebuild C++;
+see `docs/BUILD.md` and build every target ABI you intend to run.

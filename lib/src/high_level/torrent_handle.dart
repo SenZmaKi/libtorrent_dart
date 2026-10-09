@@ -684,6 +684,23 @@ class TorrentHandle {
     }
   }
 
+  /// Snapshot of hash-verified availability: one owned byte (0/1) per piece.
+  /// Requires metadata. Empty while the native picker has no bitfield.
+  Uint8List getPieces() {
+    final count = numPieces;
+    final total = calloc<Int32>();
+    final pieces = calloc<Uint8>(count == 0 ? 1 : count);
+    try {
+      if (ffi.torrent_get_pieces(id, pieces, count, total) != 0) {
+        _throwLastError('Failed to get piece availability');
+      }
+      return Uint8List.fromList(pieces.asTypedList(total.value));
+    } finally {
+      calloc.free(pieces);
+      calloc.free(total);
+    }
+  }
+
   TorrentStatus getStatus() {
     final status = calloc<ffi.TorrentStatusNative>();
     try {

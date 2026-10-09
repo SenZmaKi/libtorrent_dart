@@ -1,5 +1,8 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:ffi';
+import 'package:ffi/ffi.dart';
+import 'package:libtorrent_dart/libtorrent_dart_ffi.dart' as raw;
 import 'dart:typed_data';
 import 'package:libtorrent_dart/libtorrent_dart.dart';
 import 'package:test/test.dart';
@@ -46,6 +49,26 @@ void registerStreamingContract() {
         }
         expect(torrent.pieceLength, 131072);
         expect(torrent.numPieces, 5);
+        final pieces = torrent.getPieces();
+        expect(pieces, hasLength(5));
+        for (var i = 0; i < pieces.length; i++) {
+          expect(pieces[i], torrent.havePiece(i) ? 1 : 0);
+        }
+        final total = calloc<Int32>();
+        final buffer = calloc<Uint8>(5);
+        try {
+          expect(raw.torrent_get_pieces(torrent.id, nullptr, 0, total), 0);
+          expect(total.value, 5);
+          expect(raw.torrent_get_pieces(torrent.id, buffer, 1, total), -1);
+          expect(raw.torrent_get_pieces(torrent.id, buffer, 5, total), 0);
+          expect(buffer.asTypedList(5), pieces);
+          expect(raw.torrent_get_pieces(-999, buffer, 5, total), -1);
+        } finally {
+          calloc.free(total);
+          calloc.free(buffer);
+        }
+        pieces[0] = 0;
+        expect(torrent.getPieces()[0], 1);
         expect(torrent.pieceSize(4), expected.length - 4 * 131072);
         expect(() => torrent.pieceSize(5), throwsA(isA<LibtorrentException>()));
         for (var i = 0; i < torrent.numPieces; i++) {

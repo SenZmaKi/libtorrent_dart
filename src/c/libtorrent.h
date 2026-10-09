@@ -531,6 +531,9 @@ LTD_API int torrent_read_piece(int tor, int piece);
 LTD_API int torrent_add_piece(int tor, int piece, char const *data, int size,
                               int flags);
 LTD_API int torrent_have_piece(int tor, int piece);
+// Owned caller buffer: one byte (0 or 1) per hash-verified piece.
+LTD_API int torrent_get_pieces(int tor, unsigned char *pieces, int capacity,
+                               int *total_pieces);
 LTD_API int torrent_save_resume_data(int tor, int flags);
 LTD_API int torrent_get_resume_data(int tor, char *dest, int len,
                                     int *required_len, int flags);

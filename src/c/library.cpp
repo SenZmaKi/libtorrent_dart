@@ -2420,6 +2420,34 @@ TORRENT_EXPORT int torrent_add_piece(int tor, int piece, char const *data,
   }
 }
 
+TORRENT_EXPORT int torrent_get_pieces(int tor, unsigned char *pieces,
+                                      int capacity, int *total_pieces) {
+  clear_last_error();
+  try {
+    auto h = get_handle(tor);
+    if (!h.is_valid() || !total_pieces || capacity < 0) {
+      set_last_error(-1, "invalid get_pieces arguments");
+      return -1;
+    }
+    auto status = h.status(lt::torrent_handle::query_pieces);
+    *total_pieces = status.pieces.size();
+    if (!pieces || capacity == 0) return 0;
+    if (capacity < *total_pieces) {
+      set_last_error(-1, "piece buffer too small");
+      return -1;
+    }
+    for (int i = 0; i < *total_pieces; ++i)
+      pieces[i] = status.pieces[lt::piece_index_t(i)] ? 1 : 0;
+    return 0;
+  } catch (std::exception const &e) {
+    set_last_error(-1, e.what());
+    return -1;
+  } catch (...) {
+    set_last_error(-1, "unknown exception in torrent_get_pieces");
+    return -1;
+  }
+}
+
 TORRENT_EXPORT int torrent_have_piece(int tor, int piece) {
   clear_last_error();
   try {

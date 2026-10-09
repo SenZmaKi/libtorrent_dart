@@ -840,3 +840,11 @@ external int torrent_piece_length(int torrentId);
 external int torrent_num_pieces(int torrentId);
 @Native<Int32 Function(Int32, Int32)>()
 external int torrent_piece_size(int torrentId, int piece);
+
+@Native<Int32 Function(Int32, Pointer<Uint8>, Int32, Pointer<Int32>)>()
+external int torrent_get_pieces(
+  int tor,
+  Pointer<Uint8> pieces,
+  int capacity,
+  Pointer<Int32> totalPieces,
+);
