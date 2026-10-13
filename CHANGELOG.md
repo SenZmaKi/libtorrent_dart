@@ -1,3 +1,9 @@
+## 1.2.0
+
+- Add `TorrentHandle.getPieces()` to read hash-verified piece availability in one native call.
+- Expose `torrent_get_pieces` with owned snapshot data and buffer validation.
+- Rebuild native assets for all supported platforms with the bulk piece API.
+
 ## 1.1.2
 
 - Move the native-download helper outside `hook/` so pub.dev accepts the package.
